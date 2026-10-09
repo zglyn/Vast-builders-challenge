@@ -29,4 +29,4 @@ done
 python3 build_promo.py script.json $A ~/ghost-promo/out/GHOST_promo.mp4
 ```
 
-Output is intentionally not committed (≈31 MB).
+Rendered output: [`docs/media/GHOST_promo.mp4`](../../../docs/media/GHOST_promo.mp4) (≈31 MB).
