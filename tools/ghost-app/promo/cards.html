@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>GHOST promo cards</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg0: #06080f; --bg1: #0d1326; --amber: #ffc14d; --green: #2ee59d; --red: #ff5a6a; --ink: #eef2ff; --mute: #9aa6c4;
+  }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--bg0); color: var(--ink);
+    font-family: "Inter", "Liberation Sans", sans-serif; }
+  .card { position: absolute; inset: 0; display: none; padding: 120px 140px; box-sizing: border-box;
+    background:
+      radial-gradient(1200px 700px at 80% 10%, rgba(46,229,157,0.16), transparent 60%),
+      radial-gradient(900px 600px at 10% 90%, rgba(255,193,77,0.18), transparent 60%),
+      linear-gradient(135deg, var(--bg1), var(--bg0)); }
+  .card.on { display: flex; flex-direction: column; justify-content: center; }
+  .grid { position: absolute; inset: 0; background-image:
+      linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+    background-size: 80px 80px; mask-image: linear-gradient(180deg, rgba(0,0,0,0.9), transparent 85%); }
+  .eyebrow { font: 600 30px/1 "Inter", sans-serif; letter-spacing: 0.28em; text-transform: uppercase; color: var(--amber); margin-bottom: 36px; }
+  h1 { font: 700 118px/1.02 "Space Grotesk", "DejaVu Sans", sans-serif; letter-spacing: -0.02em; margin: 0 0 40px; max-width: 1500px; }
+  h1 .g { color: var(--green); } h1 .a { color: var(--amber); } h1 .r { color: var(--red); }
+  p.sub { font: 400 44px/1.35 "Inter", sans-serif; color: var(--mute); margin: 0; max-width: 1400px; }
+  .chips { display: flex; gap: 22px; margin-top: 60px; flex-wrap: wrap; }
+  .chip { font: 600 30px/1 "Inter", sans-serif; padding: 20px 30px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.05); }
+  .chip.g { border-color: var(--green); color: var(--green); } .chip.a { border-color: var(--amber); color: var(--amber); } .chip.r { border-color: var(--red); color: var(--red); }
+  .stat { display: flex; gap: 90px; margin-top: 70px; }
+  .stat div b { display: block; font: 700 120px/1 "Space Grotesk", sans-serif; color: var(--ink); }
+  .stat div span { font: 600 30px/1.2 "Inter", sans-serif; color: var(--mute); letter-spacing: 0.06em; text-transform: uppercase; }
+  .logo { position: absolute; right: 120px; bottom: 90px; display: flex; align-items: center; gap: 22px; }
+  .logo .dot { width: 26px; height: 26px; border-radius: 50%; background: var(--green); box-shadow: 0 0 40px var(--green); }
+  .logo span { font: 700 40px/1 "Space Grotesk", sans-serif; letter-spacing: 0.3em; }
+  .ghost-word { font: 700 300px/1 "Space Grotesk", sans-serif; letter-spacing: -0.03em;
+    background: linear-gradient(90deg, #fff, var(--green) 60%, var(--amber)); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0 0 20px; }
+  .term { font: 500 42px/1.25 "DejaVu Sans Mono", monospace; background: rgba(0,0,0,0.45); border: 2px solid rgba(255,255,255,0.14);
+    border-radius: 24px; padding: 40px 48px; margin-top: 54px; max-width: 1500px; }
+  .term .p { color: var(--mute); } .term .q { color: var(--amber); } .term .ans { color: var(--green); }
+  .lane { position: absolute; left: 0; right: 0; height: 10px; background: repeating-linear-gradient(90deg, rgba(255,255,255,0.35) 0 160px, transparent 160px 320px); opacity: 0.35; }
+</style>
+</head>
+<body>
+
+<section class="card" id="problem">
+  <div class="grid"></div>
+  <div class="eyebrow">The problem</div>
+  <h1>Thousands of hours.<br/>One ending each.</h1>
+  <p class="sub">Traffic cameras record everything, but the near misses are buried, and analysts can only see what <b>did</b> happen, never what <b>could have</b>.</p>
+  <div class="stat">
+    <div><b>24/7</b><span>cameras recording</span></div>
+    <div><b>~0</b><span>near misses reviewed</span></div>
+    <div><b>1</b><span>outcome ever seen</span></div>
+  </div>
+  <div class="logo"><div class="dot"></div><span>GHOST</span></div>
+</section>
+
+<section class="card" id="intro">
+  <div class="grid"></div>
+  <div class="lane" style="top:985px"></div>
+  <div class="eyebrow">Introducing</div>
+  <div class="ghost-word">GHOST</div>
+  <p class="sub">Counterfactual traffic intelligence. Search real footage, ask <span style="color:var(--amber)">what if</span>, and watch the alternate seconds play out.</p>
+  <div class="chips">
+    <div class="chip g">VAST video stack</div><div class="chip">Cosmos Reason</div><div class="chip">YOLO tracks</div><div class="chip a">Multi-agent drivers</div>
+  </div>
+</section>
+
+<section class="card" id="ask">
+  <div class="grid"></div>
+  <div class="eyebrow">Ask the question</div>
+  <h1>“What if the <span class="a">truck brakes</span><br/>right now?”</h1>
+  <div class="term">
+    <div class="p">› parse: intervention = earlier_braking · target = track 54</div>
+    <div class="p">› ensemble: 5 driver personas · 1.5 s horizon</div>
+    <div class="ans">› min gap: 41 px → 9 px · <span class="q">HYPOTHETICAL</span></div>
+  </div>
+  <div class="logo"><div class="dot"></div><span>GHOST</span></div>
+</section>
+
+<section class="card" id="honest">
+  <div class="grid"></div>
+  <div class="eyebrow">Honest by design</div>
+  <h1>Labeled <span class="r">hypothetical</span>.<br/>Always.</h1>
+  <p class="sub">Only the intervened vehicle moves. Neighbors stay as filmed. Every export is stamped GENERATED, and nothing is a crash prediction or a verdict.</p>
+  <div class="chips">
+    <div class="chip r">Not a crash prediction</div><div class="chip">Image-space only</div><div class="chip g">Real pixels, moved</div>
+  </div>
+  <div class="logo"><div class="dot"></div><span>GHOST</span></div>
+</section>
+
+<section class="card" id="outro">
+  <div class="grid"></div>
+  <div class="lane" style="top:860px"></div>
+  <div class="ghost-word">GHOST</div>
+  <h1 style="font-size:92px">See the ending that <span class="g">didn’t happen</span>.</h1>
+  <div class="chips">
+    <div class="chip a">Team 42</div><div class="chip">VAST Builders Challenge</div><div class="chip g">Open the App → GHOST</div>
+  </div>
+</section>
+
+<script>
+  const id = new URLSearchParams(location.search).get('card') || 'problem';
+  (document.getElementById(id) || document.querySelector('.card')).classList.add('on');
+</script>
+</body>
+</html>

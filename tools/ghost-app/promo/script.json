@@ -1,0 +1,85 @@
+{
+  "voice": "en-US-AndrewMultilingualNeural",
+  "rate": "+6%",
+  "pitch": "+2Hz",
+  "scenes": [
+    {
+      "id": "hook",
+      "kind": "footage",
+      "asset": "demo_clip.mp4",
+      "clip_start": 0.0,
+      "min_sec": 6,
+      "caption": "OBSERVED  ·  I-24 traffic camera",
+      "narration": "Every near miss on the highway has a story. But cameras only ever show us one ending."
+    },
+    {
+      "id": "problem",
+      "kind": "card",
+      "asset": "card_problem.png",
+      "min_sec": 7,
+      "narration": "Cities record thousands of hours of traffic video. The close calls are buried in it. And even when an analyst finds one, they can only see what happened. Never what could have happened."
+    },
+    {
+      "id": "intro",
+      "kind": "card",
+      "asset": "card_intro.png",
+      "min_sec": 6,
+      "narration": "Meet GHOST. Counterfactual traffic intelligence, built on the VAST video stack with Cosmos reasoning."
+    },
+    {
+      "id": "lab",
+      "kind": "shot",
+      "asset": "shot_lab.png",
+      "min_sec": 7,
+      "caption": "GHOST Lab  ·  search, track, ask \"what if\"",
+      "narration": "Search the archive in plain language. GHOST pulls the detections, tracks every vehicle, and finds the moment the gap closes."
+    },
+    {
+      "id": "ask",
+      "kind": "card",
+      "asset": "card_ask.png",
+      "min_sec": 6,
+      "narration": "Then you ask the question. What if the truck brakes right now? A multi-agent ensemble of driver personas plays out the alternate seconds."
+    },
+    {
+      "id": "export",
+      "kind": "footage",
+      "asset": "export_quality.mp4",
+      "loop": 3,
+      "min_sec": 7,
+      "caption": "GENERATED  ·  what if the truck brakes?",
+      "narration": "And it renders the answer on the real footage. Only the truck moves. The cars around it stay exactly as they were filmed."
+    },
+    {
+      "id": "split",
+      "kind": "footage",
+      "asset": "export_split.mp4",
+      "loop": 3,
+      "min_sec": 6,
+      "caption": "REALITY  |  GENERATED",
+      "narration": "Reality on the left. The what-if on the right. Same frames, same camera, one changed decision."
+    },
+    {
+      "id": "honest",
+      "kind": "card",
+      "asset": "card_honest.png",
+      "min_sec": 6,
+      "narration": "Every clip is labeled hypothetical. GHOST is a thinking tool for safety teams, not a crash predictor and not a verdict."
+    },
+    {
+      "id": "creative",
+      "kind": "shot",
+      "asset": "shot_creative.png",
+      "min_sec": 5,
+      "caption": "Creative mode  ·  comedy what-ifs",
+      "narration": "And when you want to make the room laugh, Creative mode turns the same engine into cartoon gags with sound effects."
+    },
+    {
+      "id": "outro",
+      "kind": "card",
+      "asset": "card_outro.png",
+      "min_sec": 7,
+      "narration": "GHOST. See the ending that didn't happen. Built by team forty two at the VAST Builders Challenge."
+    }
+  ]
+}
