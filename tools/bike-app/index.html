@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GHOST NYC — See the City Before It Happens</title>
+<style>
+:root {
+  --bg: #080A0E; --surface: #11141A; --card: #191D25; --card-2: #21262f;
+  --text: #F5F5F7; --muted: #9CA3AF; --accent: #56D8FF; --ok: #34C759; --warn: #FFB340; --danger: #FF453A;
+  --yellow: #FFD60A; --orange: #FF9F0A;
+  --r-card: 22px; --r-btn: 14px; --r-modal: 26px;
+  --shadow: 0 18px 50px rgba(0,0,0,.45); --shadow-sm: 0 6px 20px rgba(0,0,0,.35);
+  --ease: cubic-bezier(.2,.8,.2,1); --spring: cubic-bezier(.34,1.4,.64,1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); }
+body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, "Helvetica Neue", sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+h1, h2, h3 { margin: 0; letter-spacing: -0.02em; line-height: 1.12; }
+h1 { font-size: clamp(38px, 6vw, 72px); font-weight: 700; }
+h2 { font-size: clamp(26px, 3.4vw, 40px); font-weight: 650; }
+h3 { font-size: 17px; font-weight: 600; }
+p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+button:focus-visible, [tabindex]:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.tiny { font-size: 12px; color: var(--muted); }
+
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: var(--r-btn); background: var(--card); color: var(--text); font-weight: 600; transition: transform .22s var(--ease), background .22s, box-shadow .22s; box-shadow: var(--shadow-sm); }
+.btn:hover { background: var(--card-2); transform: translateY(-1px); }
+.btn:active { transform: scale(.98); }
+.btn.primary { background: var(--accent); color: #04121a; }
+.btn.primary:hover { background: #7ae2ff; }
+.btn.ghost { background: transparent; box-shadow: none; border: 1px solid rgba(255,255,255,.1); }
+.btn.sm { padding: 8px 12px; font-size: 13px; border-radius: 12px; }
+.btn.on { background: rgba(86,216,255,.16); color: var(--accent); border: 1px solid rgba(86,216,255,.4); }
+.btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; }
+.chip { padding: 6px 12px; border-radius: 999px; background: var(--card); font-size: 13px; color: var(--muted); border: 1px solid rgba(255,255,255,.06); }
+.chip:hover { color: var(--text); background: var(--card-2); }
+.card { background: var(--card); border-radius: var(--r-card); box-shadow: var(--shadow-sm); border: 1px solid rgba(255,255,255,.04); }
+.score { font-variant-numeric: tabular-nums; font-weight: 700; }
+.c-green { color: var(--ok); } .c-yellow { color: var(--yellow); } .c-orange { color: var(--orange); } .c-red { color: var(--danger); } .c-analyzing { color: var(--muted); }
+
+nav.top { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; backdrop-filter: blur(18px); background: rgba(8,10,14,.72); border-bottom: 1px solid rgba(255,255,255,.05); }
+nav.top .brand { font-weight: 700; letter-spacing: .14em; font-size: 15px; }
+nav.top .brand span { color: var(--accent); }
+nav.top .links { display: flex; gap: 6px; }
+nav.top .links a, nav.top .links button { padding: 8px 14px; border-radius: 12px; color: var(--muted); font-weight: 500; }
+nav.top .links a:hover, nav.top .links button:hover, nav.top .links .active { color: var(--text); background: var(--card); }
+nav.top .right { display: flex; gap: 8px; }
+
+section.view { display: none; }
+section.view.active { display: block; animation: fade .3s var(--ease); }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.hero { position: relative; min-height: 78vh; display: grid; place-items: center; overflow: hidden; isolation: isolate; }
+.hero video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; filter: brightness(.42) saturate(.85); }
+.hero::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(8,10,14,.25), rgba(8,10,14,.75) 70%, var(--bg)); }
+.hero .accent { position: absolute; left: -20%; right: -20%; top: 58%; height: 1px; background: linear-gradient(90deg, transparent, rgba(86,216,255,.7), transparent); z-index: -1; animation: sweep 9s linear infinite; opacity: .6; }
+@keyframes sweep { from { transform: translateX(-30%); } to { transform: translateX(30%); } }
+.hero-inner { max-width: 880px; padding: 96px 24px 72px; text-align: center; }
+.hero-inner .eyebrow { color: var(--accent); letter-spacing: .2em; font-size: 12px; font-weight: 600; margin-bottom: 20px; }
+.hero-inner p.lead { color: #d6dae2; font-size: 18px; max-width: 640px; margin: 20px auto 32px; }
+.hero-inner .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.section { max-width: 1180px; margin: 0 auto; padding: 72px 24px; }
+.section .sub { color: var(--muted); margin-top: 8px; font-size: 17px; }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-top: 32px; }
+.step { padding: 24px; }
+.step b { display: block; color: var(--accent); font-size: 13px; letter-spacing: .14em; margin-bottom: 10px; }
+.challenges { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin-top: 32px; }
+.challenge { padding: 22px; text-align: left; transition: transform .25s var(--spring), background .2s; }
+.challenge:hover:not([disabled]) { transform: translateY(-3px); background: var(--card-2); }
+.challenge h3 { margin-bottom: 6px; }
+.about { display: grid; grid-template-columns: 1.1fr .9fr; gap: 32px; }
+.about ul { margin: 12px 0 0; padding-left: 18px; color: var(--muted); }
+
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 28px 0 18px; }
+.toolbar select { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 9px 12px; font: inherit; }
+.toolbar .spacer { flex: 1; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.ride-card { overflow: hidden; text-align: left; padding: 0; transition: transform .28s var(--spring), box-shadow .28s; position: relative; display: flex; flex-direction: column; }
+.ride-card:hover { transform: translateY(-4px) scale(1.01); box-shadow: var(--shadow); }
+.ride-card.picked { outline: 2px solid var(--accent); }
+.thumb { aspect-ratio: 16/9; background: #0d1016; position: relative; overflow: hidden; }
+.thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb .dur { position: absolute; right: 10px; bottom: 10px; background: rgba(8,10,14,.75); padding: 3px 8px; border-radius: 8px; font-size: 12px; }
+.thumb .peak { position: absolute; left: 10px; top: 10px; background: rgba(8,10,14,.75); padding: 3px 8px; border-radius: 8px; font-size: 12px; }
+.ride-card .body { padding: 14px 16px 16px; display: grid; gap: 6px; }
+.ride-card .meta { display: flex; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+.ride-card .caption { color: var(--muted); font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.skeleton { height: 290px; border-radius: var(--r-card); background: linear-gradient(90deg, var(--surface), var(--card), var(--surface)); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.pager { display: flex; gap: 8px; justify-content: center; align-items: center; margin: 28px 0; }
+.empty { padding: 48px; text-align: center; color: var(--muted); }
+.compare-bar { position: sticky; bottom: 16px; display: flex; justify-content: center; gap: 12px; margin-top: 16px; z-index: 5; }
+.compare-bar .card { padding: 10px 14px; display: flex; gap: 12px; align-items: center; }
+
+.ride-nav { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; }
+.ride-nav .center { font-weight: 700; letter-spacing: .14em; }
+.ride-nav .center span { color: var(--accent); }
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; padding: 0 24px 32px; }
+.workspace.collapsed { grid-template-columns: minmax(0, 1fr) 56px; }
+.stage { min-width: 0; }
+.screen { position: relative; background: #000; border-radius: var(--r-card); overflow: hidden; aspect-ratio: 16/9; box-shadow: var(--shadow); }
+.screen video, .screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.screen video { object-fit: contain; transition: filter .45s var(--ease); }
+.screen.dim video { filter: brightness(.45) saturate(.8); }
+.screen .badge { position: absolute; left: 14px; top: 14px; z-index: 2; font-size: 12px; letter-spacing: .1em; color: #cfeeff; background: rgba(8,10,14,.6); padding: 6px 10px; border-radius: 999px; backdrop-filter: blur(8px); }
+.screen .hint { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 2; background: rgba(8,10,14,.72); padding: 8px 14px; border-radius: 999px; font-size: 13px; color: #e6f7ff; backdrop-filter: blur(8px); transition: opacity .3s; }
+.controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.controls .time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; margin-left: 4px; }
+.controls select { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 8px 10px; font: inherit; font-size: 13px; }
+.tl-wrap { position: relative; margin-top: 10px; padding: 10px 12px 6px; }
+.tl-wrap canvas { width: 100%; height: 96px; display: block; cursor: pointer; }
+.tl-tip { position: absolute; bottom: 100%; transform: translate(-50%, -6px); background: var(--card-2); padding: 8px 10px; border-radius: 12px; font-size: 12px; pointer-events: none; white-space: nowrap; box-shadow: var(--shadow-sm); }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); padding: 4px 4px 0; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+aside.insights { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.panel { padding: 16px; }
+.panel h3 { margin-bottom: 10px; }
+.features { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.feature { padding: 14px; text-align: left; border-radius: 18px; background: var(--card-2); display: grid; gap: 6px; transition: transform .25s var(--spring), background .2s, outline-color .2s; outline: 1px solid transparent; }
+.feature:hover { transform: translateY(-2px); background: #262c37; }
+.feature.on { outline-color: var(--accent); background: rgba(86,216,255,.1); }
+.feature svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.feature b { font-size: 13px; letter-spacing: .06em; }
+.feature span { font-size: 12px; color: var(--muted); }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tabs button { padding: 7px 11px; border-radius: 10px; font-size: 12px; color: var(--muted); background: var(--card-2); }
+.tabs button.on { color: var(--accent); background: rgba(86,216,255,.12); }
+.obj-card .head { display: flex; justify-content: space-between; align-items: baseline; }
+.obj-card .big { font-size: 28px; }
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 10px; font-size: 13px; margin-top: 10px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; }
+.bars { display: grid; gap: 6px; margin-top: 10px; }
+.bar { display: grid; grid-template-columns: 90px 1fr 34px; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.bar div { height: 6px; border-radius: 99px; background: #2a303b; overflow: hidden; }
+.bar div i { display: block; height: 100%; background: var(--accent); transition: width .4s var(--ease); }
+.spark { width: 100%; height: 40px; display: block; margin-top: 8px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.scenarios { display: grid; gap: 8px; }
+.scenario { text-align: left; padding: 12px 14px; border-radius: 16px; background: var(--card-2); display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; outline: 1px solid transparent; transition: outline-color .2s, background .2s; }
+.scenario.on { outline-color: var(--accent); background: rgba(86,216,255,.1); }
+.scenario b { font-size: 14px; } .scenario span { font-size: 12px; color: var(--muted); grid-column: 1; }
+.scenario .lvl { grid-row: 1 / span 2; font-size: 13px; font-weight: 700; text-align: right; }
+.sliders { display: grid; gap: 10px; margin: 12px 0; }
+.sliders label { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; font-size: 13px; }
+.sliders label small { color: var(--muted); grid-column: 1 / -1; font-size: 12px; }
+.sliders input { grid-column: 1 / -1; accent-color: var(--accent); }
+details { margin-top: 10px; font-size: 13px; color: var(--muted); }
+details summary { cursor: pointer; color: var(--text); font-weight: 500; }
+details pre { white-space: pre-wrap; font-size: 12px; background: var(--surface); padding: 10px; border-radius: 12px; max-height: 240px; overflow: auto; }
+.list { display: grid; gap: 8px; }
+.hit { display: grid; grid-template-columns: 96px 1fr; gap: 10px; padding: 8px; border-radius: 14px; background: var(--card-2); text-align: left; align-items: start; transition: background .2s; }
+.hit:hover { background: #262c37; }
+.hit .thumb { border-radius: 10px; aspect-ratio: 16/9; }
+.hit b { font-size: 13px; display: block; }
+.hit span { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.search { display: flex; gap: 8px; }
+.search input { flex: 1; background: var(--surface); border: 1px solid rgba(255,255,255,.08); color: var(--text); border-radius: 12px; padding: 10px 12px; font: inherit; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+.chat { display: grid; gap: 10px; max-height: 420px; overflow: auto; padding-right: 4px; }
+.msg { padding: 10px 12px; border-radius: 16px; font-size: 14px; }
+.msg.q { background: rgba(86,216,255,.12); justify-self: end; max-width: 90%; }
+.msg.a { background: var(--card-2); }
+.cites { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.cites button { font-size: 12px; padding: 4px 9px; border-radius: 8px; background: var(--surface); color: var(--accent); }
+.zone-item { text-align: left; padding: 10px 12px; border-radius: 14px; background: rgba(255,179,64,.1); border: 1px solid rgba(255,179,64,.25); display: grid; gap: 4px; }
+.zone-item b { color: var(--warn); font-size: 13px; }
+.collapse-btn { align-self: flex-end; }
+.workspace.collapsed .panel { display: none; }
+.note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 0 24px 32px; }
+.compare .pane { min-width: 0; }
+.compare .pane h3 { margin: 10px 0 4px; }
+.compare .stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin: 6px 0; }
+.compare .stats b { color: var(--text); }
+
+.overlay { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(8,10,14,.72); backdrop-filter: blur(10px); animation: fade .25s var(--ease); }
+.modal { width: min(560px, 92vw); padding: 32px; border-radius: var(--r-modal); }
+.modal h2 { font-size: 30px; }
+.modal ol { margin: 18px 0 0; padding-left: 20px; display: grid; gap: 10px; color: var(--muted); }
+.demo-bar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 70; width: min(760px, 94vw); padding: 14px 18px; display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; align-items: center; animation: fade .3s var(--ease); }
+.demo-bar b { font-size: 15px; }
+.demo-bar .dots { display: flex; gap: 5px; grid-column: 1; }
+.demo-bar .dots i { width: 18px; height: 3px; border-radius: 3px; background: #2a303b; }
+.demo-bar .dots i.done { background: var(--accent); }
+.demo-bar .btns { grid-row: 1 / span 3; display: flex; gap: 6px; }
+.toast { position: fixed; left: 50%; top: 76px; transform: translateX(-50%); z-index: 80; padding: 10px 16px; border-radius: 999px; background: var(--card-2); box-shadow: var(--shadow); font-size: 14px; animation: fade .25s var(--ease); max-width: 90vw; }
+
+@media (max-width: 1080px) { .workspace { grid-template-columns: 1fr; } .workspace.collapsed { grid-template-columns: 1fr; } .compare { grid-template-columns: 1fr; } .steps, .challenges { grid-template-columns: 1fr 1fr; } .about { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .steps, .challenges { grid-template-columns: 1fr; } nav.top { padding: 12px 16px; } nav.top .links { display: none; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<nav class="top">
+  <a class="brand" href="#/"><span>GHOST</span> NYC</a>
+  <div class="links">
+    <a href="#/rides" data-nav="rides">Explore</a>
+    <a href="#/how" data-nav="how">How It Works</a>
+    <a href="#/about" data-nav="about">About</a>
+  </div>
+  <div class="right">
+    <button class="btn sm primary" id="nav-demo">Start Demo</button>
+    <button class="btn sm ghost" id="nav-help">Help</button>
+  </div>
+</nav>
+
+<section class="view" id="view-home">
+  <div class="hero">
+    <video id="hero-video" muted playsinline preload="metadata"></video>
+    <div class="accent"></div>
+    <div class="hero-inner">
+      <div class="eyebrow">SEE THE CITY BEFORE IT HAPPENS</div>
+      <h1>Every street has a story.<br>Some haven't happened yet.</h1>
+      <p class="lead">Explore New York City through the eyes of a cyclist. Discover hidden risks, investigate near misses, and explore possible futures.</p>
+      <div class="cta">
+        <a class="btn primary" href="#/rides">Explore NYC Rides</a>
+        <button class="btn" id="hero-demo">Watch 60-Second Demo</button>
+      </div>
+      <p class="tiny" style="margin-top:22px">Real GoPro footage indexed on VAST. Scores are heuristic risk scores, not crash probabilities.</p>
+    </div>
+  </div>
+  <div class="section" id="how">
+    <h2>How it works</h2>
+    <p class="sub">Three steps. No instructions needed.</p>
+    <div class="steps">
+      <div class="card step"><b>01 · CHOOSE A RIDE</b><h3>Pick any real NYC clip</h3><p class="muted small">Every ride is a 5-second GoPro segment indexed by the VAST pipeline with YOLO detections and a Cosmos caption.</p></div>
+      <div class="card step"><b>02 · PICK A FEATURE</b><h3>See, reveal, remember, ask</h3><p class="muted small">Project alternative futures, expose blind spots, search similar moments, or ask GHOST for evidence.</p></div>
+      <div class="card step"><b>03 · EXPLORE</b><h3>Click any object</h3><p class="muted small">Each tracked road user carries a live Risk Score from 0 to 100. Click it to understand why.</p></div>
+    </div>
+  </div>
+  <div class="section" id="challenge">
+    <h2>Challenge GHOST</h2>
+    <p class="sub">Choose a situation. See what the AI discovers.</p>
+    <div class="challenges" id="challenges"></div>
+  </div>
+  <div class="section about" id="about">
+    <div>
+      <h2>About</h2>
+      <p class="sub">GHOST NYC is a bicycle safety intelligence layer built on the VAST video stack.</p>
+      <ul>
+        <li>Footage: first-person NYC bike GoPro clips, camera <code>nyc_bike_gopro-1</code>.</li>
+        <li>Detections: YOLO11 sidecars from the pipeline. GHOST never adds boxes.</li>
+        <li>Tracking: ByteTrack-style association inside each clip.</li>
+        <li>Risk Score: a transparent 0–100 heuristic from path overlap, apparent proximity, closing motion, and timing.</li>
+        <li>Language: W&amp;B serverless inference restates computed evidence. It cannot add observations.</li>
+      </ul>
+    </div>
+    <div class="card panel">
+      <h3>What the numbers mean</h3>
+      <p class="muted small" style="margin-top:8px">Observations are YOLO boxes and tracks. Predictions are image-space projections of those tracks. Uncertainty is shown as amber. No value is a distance in meters or a measured crash probability.</p>
+      <div class="legend" style="margin-top:14px"><span><i style="background:var(--ok)"></i>0–24</span><span><i style="background:var(--yellow)"></i>25–49</span><span><i style="background:var(--orange)"></i>50–74</span><span><i style="background:var(--danger)"></i>75–100</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="view-rides">
+  <div class="section" style="padding-top:48px">
+    <h2>Choose a Ride</h2>
+    <p class="sub">Every journey reveals something different.</p>
+    <div class="toolbar">
+      <select id="sort" aria-label="Sort rides">
+        <option value="interesting">Most interesting</option>
+        <option value="objects">Most objects</option>
+        <option value="longest">Longest ride</option>
+        <option value="recent">Recently indexed</option>
+        <option value="order">Ride order</option>
+      </select>
+      <select id="filter" aria-label="Filter rides">
+        <option value="all">All rides</option>
+        <option value="high">High-interaction rides</option>
+        <option value="pedestrian">Pedestrian interactions</option>
+        <option value="vehicle">Vehicle interactions</option>
+        <option value="cycling">Cycling interactions</option>
+      </select>
+      <span class="tiny" id="lib-status"></span>
+      <span class="spacer"></span>
+      <button class="btn sm" id="compare-mode">Compare Rides</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" hidden>No rides match this filter yet. Analysis summaries keep arriving in the background.</div>
+    <div class="pager" id="pager"></div>
+    <div class="compare-bar" id="compare-bar" hidden><div class="card"><span id="compare-text">Pick two rides</span><button class="btn sm primary" id="compare-go" disabled>Compare now</button><button class="btn sm ghost" id="compare-cancel">Cancel</button></div></div>
+  </div>
+</section>
+
+<section class="view" id="view-ride">
+  <div class="ride-nav">
+    <a class="btn sm ghost" href="#/rides">← Back to Rides</a>
+    <div class="center"><span>GHOST</span> NYC</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn sm" id="ride-report">Generate Report</button>
+      <button class="btn sm primary" id="ride-demo">Demo Mode</button>
+      <button class="btn sm ghost" id="ride-help">Help</button>
+    </div>
+  </div>
+  <div class="workspace" id="workspace">
+    <div class="stage">
+      <div class="screen" id="screen">
+        <div class="badge" id="badge">Loading ride</div>
+        <div class="hint" id="hint" style="opacity:0"></div>
+      </div>
+      <div class="controls">
+        <button class="btn sm" id="play">Play</button>
+        <button class="btn sm ghost" id="replay">Replay</button>
+        <select id="speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
+        <span class="time" id="time">0.00 s</span>
+        <span class="spacer" style="flex:1"></span>
+        <button class="btn sm on" id="t-risk">Show Risk</button>
+        <button class="btn sm on" id="t-objects">Show Objects</button>
+        <button class="btn sm" id="t-paths">Show Paths</button>
+        <button class="btn sm" id="t-blind">Show Blind Spots</button>
+      </div>
+      <div class="card tl-wrap">
+        <canvas id="timeline"></canvas>
+        <div class="tl-tip" id="tl-tip" hidden></div>
+        <div class="legend"><span><i style="background:var(--accent)"></i>Peak Risk Score</span><span><i style="background:var(--danger)"></i>Candidate interaction</span><span><i style="background:#3a4150"></i>Object present</span><span><i style="background:#fff"></i>Playhead</span></div>
+      </div>
+    </div>
+    <aside class="insights" id="insights">
+      <button class="btn sm ghost collapse-btn" id="collapse" title="Collapse panel">⇥</button>
+      <div class="card panel" id="feature-panel">
+        <h3 id="feature-title">What would you like to explore?</h3>
+        <div class="features" id="features"></div>
+        <div class="tabs" id="feature-tabs" hidden></div>
+      </div>
+      <div class="card panel obj-card" id="obj-card" hidden></div>
+      <div class="card panel" id="feature-body" hidden></div>
+    </aside>
+  </div>
+</section>
+
+<section class="view" id="view-compare">
+  <div class="ride-nav">
+    <a class="btn sm ghost" href="#/rides">← Back to Rides</a>
+    <div class="center"><span>COMPARE</span> RIDES</div>
+    <button class="btn sm" id="sync">Sync by relative time</button>
+  </div>
+  <p class="tiny" style="text-align:center;padding:0 24px 12px">Two independent clips. Sync aligns playback position only; it does not mean the clips happened at the same time.</p>
+  <div class="compare" id="compare"></div>
+</section>
+
+<div id="layer"></div>
+
+<script>
+/* ---------- design tokens for canvas ---------- */
+const COLORS = { green: "#34C759", yellow: "#FFD60A", orange: "#FF9F0A", red: "#FF453A", analyzing: "#9CA3AF" };
+const ACCENT = "#56D8FF", AMBER = "#FFB340", DANGER = "#FF453A", OK = "#34C759";
+const BASE = (() => { const p = location.pathname; if (p === "/app" || p.startsWith("/app/")) return "/app/"; return p.endsWith("/") ? p : p + "/"; })();
+const api = (p) => BASE + String(p).replace(/^\//, "");
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (t) => (Number(t) || 0).toFixed(2) + " s";
+const band = (r) => r == null ? "analyzing" : r < 25 ? "green" : r < 50 ? "yellow" : r < 75 ? "orange" : "red";
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+async function getJSON(url, body) {
+  const res = await fetch(api(url), body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+function toast(text, ms = 3200) {
+  let el = document.querySelector(".toast");
+  if (!el) { el = document.createElement("div"); el.className = "toast"; document.body.appendChild(el); }
+  el.textContent = text; el.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => { el.hidden = true; }, ms);
+}
+
+/* ---------- state ---------- */
+const state = { library: null, libraryAt: 0, clips: new Map(), page: 0, pageSize: 24, compareMode: false, picked: [], feature: null, returnTo: null, demo: null };
+async function loadClip(source) {
+  if (state.clips.has(source)) return state.clips.get(source);
+  const data = await getJSON("api/clip" + (source ? "?source=" + encodeURIComponent(source) : ""));
+  state.clips.set(data.source, data);
+  return data;
+}
+function eventsOf(clip) {
+  const tl = clip.timeline || []; const out = [];
+  tl.forEach((p, i) => {
+    const v = p.max_risk; if (v == null || v < 50) return;
+    const prev = i > 0 ? tl[i - 1].max_risk : null, next = i + 1 < tl.length ? tl[i + 1].max_risk : null;
+    if ((prev == null || v >= prev) && (next == null || v > next)) {
+      if (out.length && p.t - out[out.length - 1].t < 0.6) { if (v > out[out.length - 1].max_risk) out[out.length - 1] = { t: p.t, max_risk: v }; return; }
+      out.push({ t: p.t, max_risk: v });
+    }
+  });
+  return out;
+}
+
+/* ---------- Player ---------- */
+class Player {
+  constructor(screen, opts = {}) {
+    this.screen = screen; this.opts = opts;
+    this.video = document.createElement("video"); this.video.playsInline = true; this.video.preload = "auto"; this.video.muted = true;
+    this.canvas = document.createElement("canvas"); this.ctx = this.canvas.getContext("2d");
+    screen.prepend(this.canvas); screen.prepend(this.video);
+    this.clip = null; this.selected = null; this.shown = new Map();
+    this.showObjects = true; this.showRisk = true; this.showPaths = false; this.showBlind = false;
+    this.zones = null; this.zoneFocus = null; this.futures = null; this.scenario = "continue"; this.divider = 0.5; this.anim = 0; this.redesign = null;
+    this.onSelect = opts.onSelect || (() => {}); this.onZone = opts.onZone || (() => {});
+    this.canvas.addEventListener("pointerdown", (e) => this.pointerDown(e));
+    this.canvas.addEventListener("pointermove", (e) => this.pointerMove(e));
+    this.canvas.addEventListener("pointerup", () => { this.dragging = false; });
+    this.canvas.style.touchAction = "none"; this.canvas.setAttribute("tabindex", "0"); this.canvas.setAttribute("aria-label", "Video overlay. Click an object to select it.");
+    Player.all.push(this);
+  }
+  async load(source, t) {
+    this.clip = await loadClip(source);
+    this.selected = null; this.shown.clear(); this.futures = null; this.zones = null; this.redesign = null;
+    this.video.src = api(this.clip.video_url);
+    if (t != null) this.video.currentTime = t;
+    return this.clip;
+  }
+  frameAt(t) {
+    const fr = this.clip?.frames || []; if (!fr.length) return null;
+    let lo = 0, hi = fr.length - 1, best = 0;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (fr[m].t <= t + 1e-4) { best = m; lo = m + 1; } else hi = m - 1; }
+    return fr[best];
+  }
+  geom() {
+    const dpr = devicePixelRatio || 1; const r = this.screen.getBoundingClientRect();
+    const W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
+    if (this.canvas.width !== W || this.canvas.height !== H) { this.canvas.width = W; this.canvas.height = H; }
+    const vw = this.video.videoWidth || this.clip?.width || 1920, vh = this.video.videoHeight || this.clip?.height || 1080;
+    const s = Math.min(W / vw, H / vh);
+    return { dpr, vw, vh, s, ox: (W - vw * s) / 2, oy: (H - vh * s) / 2, W, H };
+  }
+  px(g, x, y) { return [g.ox + x * g.s, g.oy + y * g.s]; }
+  npx(g, p) { return this.px(g, p[0] * g.vw, p[1] * g.vh); }
+  poly(g, pts, fill, stroke, lw) {
+    const c = this.ctx; c.beginPath();
+    pts.forEach((p, i) => { const [x, y] = this.npx(g, p); i ? c.lineTo(x, y) : c.moveTo(x, y); });
+    c.closePath(); if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.strokeStyle = stroke; c.lineWidth = lw || 2 * g.dpr; c.stroke(); }
+  }
+  path(g, pts, stroke, lw, until = 1, dash) {
+    const c = this.ctx; const n = Math.max(2, Math.ceil(until * pts.length)); c.save(); if (dash) c.setLineDash(dash);
+    c.beginPath(); pts.slice(0, n).forEach((p, i) => { const [x, y] = this.npx(g, p); i ? c.lineTo(x, y) : c.moveTo(x, y); });
+    c.strokeStyle = stroke; c.lineWidth = lw; c.stroke(); c.restore();
+  }
+  draw() {
+    if (!this.clip || !this.screen.isConnected || this.screen.offsetParent === null) return;
+    const g = this.geom(), c = this.ctx; c.clearRect(0, 0, g.W, g.H);
+    const t = this.video.currentTime || 0; const fr = this.frameAt(t);
+    this.lastFrame = fr;
+    if (!fr || Math.abs(fr.t - t) > 0.35) return;
+    const splitting = !!this.futures;
+    const divX = g.ox + this.divider * g.vw * g.s;
+    const drawObserved = () => {
+      if (this.showPaths || splitting) {
+        if (fr.corridor) {
+          this.poly(g, fr.corridor, "rgba(86,216,255,.14)", "rgba(86,216,255,.8)", 1.6 * g.dpr);
+          c.font = `${11 * g.dpr}px -apple-system, sans-serif`; c.fillStyle = "rgba(207,238,255,.9)";
+          const [lx, ly] = this.npx(g, fr.corridor[3]); c.fillText(fr.corridor_mode === "estimated" ? "ESTIMATED CORRIDOR" : "APPROXIMATE CORRIDOR", lx, ly - 8 * g.dpr);
+        }
+      }
+      if (this.showBlind && this.zones?.zones) this.drawZones(g);
+      if (!this.showObjects && !splitting) return;
+      const ranked = [...fr.objects].sort((a, b) => (b.risk || 0) - (a.risk || 0)); const placed = [];
+      for (const o of ranked) {
+        const prevShown = this.shown.get(o.id); const target = o.risk == null ? null : o.risk;
+        const shown = target == null ? null : prevShown == null ? target : prevShown + (target - prevShown) * 0.25;
+        this.shown.set(o.id, shown);
+        const color = COLORS[band(shown)]; const chosen = this.selected === o.id; const hot = (shown || 0) >= 50 || o.conflict;
+        if (splitting && !chosen && this.futures) continue;
+        const [x, y] = this.px(g, o.bbox[0], o.bbox[1]); const [x2, y2] = this.px(g, o.bbox[2], o.bbox[3]); const w = x2 - x, h = y2 - y;
+        c.save(); c.strokeStyle = color; c.lineWidth = (chosen ? 3 : hot ? 2.2 : 1.4) * g.dpr;
+        if (o.tracking === "coasting") c.setLineDash([5 * g.dpr, 4 * g.dpr]);
+        if (chosen || hot) { c.shadowColor = color; c.shadowBlur = (chosen ? 16 : 8) * g.dpr; }
+        this.roundRect(x, y, w, h, 6 * g.dpr); c.stroke(); c.restore();
+        if ((this.showPaths || chosen) && o.trajectory?.length) {
+          this.path(g, o.trajectory, o.conflict ? "rgba(255,69,58,.9)" : "rgba(86,216,255,.7)", (o.conflict ? 2.2 : 1.3) * g.dpr);
+          const last = o.trajectory[o.trajectory.length - 1]; const [ex, ey] = this.npx(g, last);
+          c.beginPath(); c.arc(ex, ey, Math.max(6, (o.uncertainty || .02) * g.vw * g.s), 0, Math.PI * 2); c.fillStyle = "rgba(255,179,64,.18)"; c.fill();
+        }
+        if (this.showRisk || chosen) {
+          const title = `${o.display} ${o.id}`; const sub = shown == null ? "ANALYZING" : `${Math.round(shown)} RISK`;
+          c.font = `600 ${12 * g.dpr}px -apple-system, sans-serif`; const tw = Math.max(c.measureText(title).width, c.measureText(sub).width) + 14 * g.dpr;
+          let lx = x, ly = y - 36 * g.dpr; if (ly < g.oy + 4) ly = y + h + 6 * g.dpr;
+          for (const p of placed) if (Math.abs(p.x - lx) < tw && Math.abs(p.y - ly) < 32 * g.dpr) ly = p.y + 34 * g.dpr;
+          placed.push({ x: lx, y: ly });
+          c.fillStyle = "rgba(8,10,14,.78)"; this.roundRect(lx, ly, tw, 30 * g.dpr, 8 * g.dpr); c.fill();
+          c.fillStyle = color; c.fillText(title, lx + 7 * g.dpr, ly + 12 * g.dpr); c.font = `${11 * g.dpr}px -apple-system, sans-serif`; c.fillText(sub, lx + 7 * g.dpr, ly + 24 * g.dpr);
+        }
+      }
+    };
+    if (!splitting) { drawObserved(); if (this.redesign) this.drawRedesign(g); return; }
+    // split: observed on the left, futures on the right
+    c.save(); c.beginPath(); c.rect(0, 0, divX, g.H); c.clip(); drawObserved(); c.restore();
+    c.save(); c.beginPath(); c.rect(divX, 0, g.W - divX, g.H); c.clip(); this.drawFutures(g, fr); c.restore();
+    c.fillStyle = "rgba(255,255,255,.85)"; c.fillRect(divX - 1 * g.dpr, 0, 2 * g.dpr, g.H);
+    c.beginPath(); c.arc(divX, g.H / 2, 14 * g.dpr, 0, Math.PI * 2); c.fillStyle = "#F5F5F7"; c.fill();
+    c.fillStyle = "#080A0E"; c.font = `700 ${12 * g.dpr}px -apple-system, sans-serif`; c.textAlign = "center"; c.fillText("⇔", divX, g.H / 2 + 4 * g.dpr); c.textAlign = "left";
+    c.font = `600 ${12 * g.dpr}px -apple-system, sans-serif`;
+    c.fillStyle = "rgba(8,10,14,.7)"; this.roundRect(g.ox + 12 * g.dpr, g.oy + 12 * g.dpr, 130 * g.dpr, 26 * g.dpr, 8 * g.dpr); c.fill();
+    c.fillStyle = "#F5F5F7"; c.fillText("WHAT HAPPENED", g.ox + 22 * g.dpr, g.oy + 29 * g.dpr);
+    c.fillStyle = "rgba(8,10,14,.7)"; this.roundRect(g.ox + g.vw * g.s - 170 * g.dpr, g.oy + 12 * g.dpr, 158 * g.dpr, 26 * g.dpr, 8 * g.dpr); c.fill();
+    c.fillStyle = ACCENT; c.fillText("WHAT COULD HAPPEN", g.ox + g.vw * g.s - 160 * g.dpr, g.oy + 29 * g.dpr);
+  }
+  drawFutures(g, fr) {
+    const c = this.ctx; const f = this.futures; this.anim = Math.min(1, this.anim + (reduced ? 1 : 0.012));
+    if (fr.corridor) this.poly(g, fr.corridor, "rgba(86,216,255,.1)", "rgba(86,216,255,.5)", 1.2 * g.dpr);
+    const sel = fr.objects.find((o) => o.id === this.selected);
+    if (sel) { const [x, y] = this.px(g, sel.bbox[0], sel.bbox[1]); const [x2, y2] = this.px(g, sel.bbox[2], sel.bbox[3]); c.save(); c.strokeStyle = "#fff"; c.lineWidth = 2.4 * g.dpr; c.shadowColor = "#fff"; c.shadowBlur = 14 * g.dpr; this.roundRect(x, y, x2 - x, y2 - y, 6 * g.dpr); c.stroke(); c.restore(); }
+    const tone = { red: DANGER, green: OK, amber: AMBER };
+    for (const sc of f.scenarios) {
+      const hot = sc.id === this.scenario;
+      this.path(g, sc.path, hot ? ACCENT : "rgba(156,163,175,.45)", (hot ? 3.2 : 1.4) * g.dpr, this.anim, hot ? null : [6 * g.dpr, 5 * g.dpr]);
+      if (!hot) continue;
+      this.path(g, sc.object_path, tone[sc.tone], 2.2 * g.dpr, this.anim);
+      const k = Math.max(0, Math.floor(this.anim * (sc.object_path.length - 1)));
+      const [ex, ey] = this.npx(g, sc.object_path[k]);
+      c.beginPath(); c.arc(ex, ey, (0.03 + (f.uncertainty || .02)) * g.vw * g.s, 0, Math.PI * 2); c.fillStyle = "rgba(255,179,64,.2)"; c.strokeStyle = "rgba(255,179,64,.6)"; c.lineWidth = 1 * g.dpr; c.fill(); c.stroke();
+      if (sc.level !== "clear") {
+        const m = sc.path[Math.min(sc.at_index, Math.floor(this.anim * (sc.path.length - 1)))]; const [mx, my] = this.npx(g, m);
+        c.beginPath(); c.arc(mx, my, 10 * g.dpr, 0, Math.PI * 2); c.fillStyle = sc.level === "overlap" ? "rgba(255,69,58,.35)" : "rgba(255,179,64,.3)"; c.fill();
+      }
+      c.font = `600 ${12 * g.dpr}px -apple-system, sans-serif`; c.fillStyle = tone[sc.tone];
+      const [lx, ly] = this.npx(g, sc.path[sc.path.length - 1]); c.fillText(`${sc.title.toUpperCase()} · ${sc.level.toUpperCase()}`, lx + 8 * g.dpr, ly);
+    }
+  }
+  drawZones(g) {
+    const c = this.ctx;
+    for (const z of this.zones.zones) {
+      const focus = this.zoneFocus === z.id;
+      this.poly(g, z.polygon, focus ? "rgba(255,179,64,.36)" : "rgba(255,179,64,.22)", "rgba(255,196,80,.9)", (focus ? 2.4 : 1.6) * g.dpr);
+      const [lx, ly] = this.npx(g, z.polygon[3]); c.fillStyle = "#FFD27A"; c.font = `600 ${12 * g.dpr}px -apple-system, sans-serif`; c.fillText("VISIBILITY LIMITED", lx, ly - 6 * g.dpr);
+    }
+  }
+  drawRedesign(g) {
+    const idea = this.redesign; if (!idea || idea.overlay === "none") return; const c = this.ctx; c.save();
+    c.strokeStyle = "rgba(52,199,89,.9)"; c.fillStyle = "rgba(52,199,89,.12)"; c.lineWidth = 2 * g.dpr; c.setLineDash([8 * g.dpr, 6 * g.dpr]);
+    const R = (x, y, w, h) => { c.strokeRect(g.ox + g.vw * g.s * x, g.oy + g.vh * g.s * y, g.vw * g.s * w, g.vh * g.s * h); };
+    if (idea.overlay === "lane") R(.08, .42, .16, .5); else if (idea.overlay === "crossing") c.fillRect(g.ox + g.vw * g.s * .28, g.oy + g.vh * g.s * .62, g.vw * g.s * .44, g.vh * g.s * .08); else R(.02, .48, .22, .28);
+    c.setLineDash([]); c.fillStyle = "#B8FFD8"; c.font = `${13 * g.dpr}px -apple-system, sans-serif`; c.fillText("CONCEPTUAL · " + idea.title, g.ox + 16 * g.dpr, g.oy + g.vh * g.s - 16 * g.dpr); c.restore();
+  }
+  roundRect(x, y, w, h, r) { const c = this.ctx; r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2); c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+  canvasPoint(e) { const r = this.canvas.getBoundingClientRect(); return [(e.clientX - r.left) * (this.canvas.width / r.width), (e.clientY - r.top) * (this.canvas.height / r.height)]; }
+  pointerDown(e) {
+    if (!this.clip) return; const g = this.geom(); const [x, y] = this.canvasPoint(e);
+    if (this.futures) { const divX = g.ox + this.divider * g.vw * g.s; if (Math.abs(x - divX) < 24 * g.dpr) { this.dragging = true; try { this.canvas.setPointerCapture(e.pointerId); } catch {} return; } }
+    const fr = this.lastFrame; if (!fr) return;
+    if (this.showBlind && this.zones?.zones) {
+      const nx = (x - g.ox) / (g.vw * g.s), ny = (y - g.oy) / (g.vh * g.s);
+      const z = this.zones.zones.find((z) => inPoly(nx, ny, z.polygon)); if (z) { this.zoneFocus = z.id; this.onZone(z); return; }
+    }
+    const hit = [...fr.objects].sort((a, b) => (b.risk || 0) - (a.risk || 0)).find((o) => { const [x1, y1] = this.px(g, o.bbox[0], o.bbox[1]); const [x2, y2] = this.px(g, o.bbox[2], o.bbox[3]); return x >= x1 && x <= x2 && y >= y1 && y <= y2; });
+    if (hit) { this.selected = hit.id; this.onSelect(hit.id); }
+  }
+  pointerMove(e) {
+    if (!this.dragging) { if (this.futures) { const g = this.geom(); const [x] = this.canvasPoint(e); this.canvas.style.cursor = Math.abs(x - (g.ox + this.divider * g.vw * g.s)) < 24 * g.dpr ? "ew-resize" : "pointer"; } return; }
+    const g = this.geom(); const [x] = this.canvasPoint(e); this.divider = Math.min(.95, Math.max(.05, (x - g.ox) / (g.vw * g.s)));
+  }
+  objectAt(id, t) { const fr = this.frameAt(t ?? this.video.currentTime); return fr?.objects.find((o) => o.id === id) || null; }
+}
+Player.all = [];
+function inPoly(x, y, poly) { let inside = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi + 1e-12) + xi) inside = !inside; } return inside; }
+/* ---------- Timeline ---------- */
+class Timeline {
+  constructor(canvas, player, tip) { this.canvas = canvas; this.player = player; this.tip = tip; this.ctx = canvas.getContext("2d"); this.marker = null;
+    canvas.addEventListener("pointerdown", (e) => { this.scrub = true; this.seek(e); });
+    canvas.addEventListener("pointermove", (e) => { if (this.scrub) this.seek(e); this.hover(e); });
+    addEventListener("pointerup", () => { this.scrub = false; });
+    canvas.addEventListener("pointerleave", () => { if (this.tip) this.tip.hidden = true; });
+    Timeline.all.push(this); }
+  dur() { const c = this.player.clip; return Number(c?.metadata?.duration) || (c?.timeline?.length ? c.timeline[c.timeline.length - 1].t : 1); }
+  ratio(e) { const r = this.canvas.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); }
+  seek(e) { this.player.video.currentTime = this.ratio(e) * this.dur(); }
+  hover(e) {
+    if (!this.tip || !this.player.clip) return; const t = this.ratio(e) * this.dur(); const ev = eventsOf(this.player.clip).find((x) => Math.abs(x.t - t) < 0.12);
+    const fr = this.player.frameAt(t); const top = fr ? [...fr.objects].filter((o) => o.risk != null).sort((a, b) => b.risk - a.risk)[0] : null;
+    this.tip.hidden = false; this.tip.style.left = (this.ratio(e) * 100) + "%";
+    this.tip.textContent = `${fmt(t)}${ev ? " · candidate interaction " + Math.round(ev.max_risk) : ""}${top ? ` · ${top.display} ${top.id} at ${Math.round(top.risk)}` : " · no scored object"}`;
+  }
+  draw() {
+    const c = this.canvas; if (!c.isConnected || c.offsetParent === null || !this.player.clip) return;
+    const dpr = devicePixelRatio || 1; const W = Math.round(c.clientWidth * dpr), H = Math.round(96 * dpr);
+    if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+    const x = this.ctx; x.clearRect(0, 0, W, H); const clip = this.player.clip; const dur = this.dur(); const pts = clip.timeline || [];
+    const laneTop = H - 24 * dpr; const curveH = laneTop - 10 * dpr;
+    // object presence lanes
+    const tracks = [...(clip.tracks || [])].filter((t) => t.t_start != null).sort((a, b) => (b.t_end - b.t_start) - (a.t_end - a.t_start)).slice(0, 10);
+    tracks.forEach((tr, i) => { const y = laneTop + 2 * dpr + (i % 5) * 4 * dpr; x.fillStyle = tr.max_risk >= 50 ? "rgba(255,69,58,.55)" : "#3a4150"; x.fillRect(tr.t_start / dur * W, y, Math.max(2, (tr.t_end - tr.t_start) / dur * W), 2.5 * dpr); });
+    // curve
+    x.beginPath(); let started = false;
+    pts.forEach((p) => { const px = p.t / dur * W, py = 10 * dpr + (1 - (p.max_risk || 0) / 100) * (curveH - 10 * dpr); if (!started) { x.moveTo(px, py); started = true; } else x.lineTo(px, py); });
+    x.strokeStyle = ACCENT; x.lineWidth = 2 * dpr; x.stroke();
+    x.lineTo(W, curveH); x.lineTo(0, curveH); x.closePath(); const grad = x.createLinearGradient(0, 0, 0, curveH); grad.addColorStop(0, "rgba(86,216,255,.25)"); grad.addColorStop(1, "rgba(86,216,255,0)"); x.fillStyle = grad; x.fill();
+    for (const ev of eventsOf(clip)) { const px = ev.t / dur * W; x.beginPath(); x.arc(px, 10 * dpr + (1 - ev.max_risk / 100) * (curveH - 10 * dpr), 4 * dpr, 0, Math.PI * 2); x.fillStyle = DANGER; x.fill(); }
+    if (this.marker != null) { const px = this.marker / dur * W; x.fillStyle = "rgba(255,179,64,.9)"; x.fillRect(px - dpr, 0, 2 * dpr, H); }
+    const play = (this.player.video.currentTime || 0) / dur * W; x.fillStyle = "#F5F5F7"; x.fillRect(play - dpr, 0, 2 * dpr, H);
+  }
+}
+Timeline.all = [];
+
+/* ---------- Router ---------- */
+const views = ["home", "rides", "ride", "compare"];
+function show(view, navKey) { views.forEach((v) => $("view-" + v).classList.toggle("active", v === view)); document.querySelectorAll("[data-nav]").forEach((a) => a.classList.toggle("active", a.dataset.nav === (navKey || view))); }
+function route() {
+  const h = location.hash || "#/"; const parts = h.slice(2).split("/");
+  if (parts[0] === "rides") { show("rides"); renderLibrary(); return; }
+  if (parts[0] === "ride" && parts[1]) { show("ride"); openRide(decodeURIComponent(parts[1]), parts[2] ? Number(parts[2]) : null); return; }
+  if (parts[0] === "compare" && parts[1] && parts[2]) { show("compare"); openCompare(decodeURIComponent(parts[1]), decodeURIComponent(parts[2])); return; }
+  show("home", parts[0] || "home"); ride?.video.pause();
+  if (parts[0] === "how" || parts[0] === "about") setTimeout(() => $(parts[0])?.scrollIntoView({ behavior: reduced ? "auto" : "smooth" }), 50); else scrollTo(0, 0);
+  renderChallenges();
+}
+addEventListener("hashchange", route);
+const rideHash = (source, t) => "#/ride/" + encodeURIComponent(source) + (t != null ? "/" + t.toFixed(2) : "");
+
+/* ---------- Library ---------- */
+let libTimer = null;
+async function fetchLibrary(force) {
+  if (!force && state.library && Date.now() - state.libraryAt < 15000) return state.library;
+  state.library = await getJSON("api/library"); state.libraryAt = Date.now(); return state.library;
+}
+function sortRows(rows) {
+  const s = $("sort").value, f = $("filter").value;
+  rows = rows.filter((r) => f === "all" ? true : f === "high" ? (r.summary?.events || 0) > 0 || (r.summary?.peak_risk || 0) >= 60 : r.categories.includes(f));
+  const key = { interesting: (r) => -(r.summary?.peak_risk ?? -1) * 1000 - (r.summary?.events || 0), objects: (r) => -(r.summary?.tracked_objects ?? r.detection_count ?? 0), longest: (r) => -(r.duration || 0), recent: (r) => -(Date.parse(r.upload_timestamp || 0) || 0), order: (r) => r.ride_offset_sec }[s];
+  return rows.sort((a, b) => key(a) - key(b) || a.ride.localeCompare(b.ride) || a.ride_offset_sec - b.ride_offset_sec);
+}
+const lazy = new IntersectionObserver((entries) => { for (const en of entries) if (en.isIntersecting) { const v = en.target; if (!v.src && v.dataset.src) v.src = v.dataset.src; lazy.unobserve(v); } }, { rootMargin: "200px" });
+function thumbEl(url, t = 1.2) { const v = document.createElement("video"); v.muted = true; v.preload = "metadata"; v.playsInline = true; v.dataset.src = api(url) + "#t=" + t; lazy.observe(v); return v; }
+async function renderLibrary() {
+  const grid = $("grid"); if (!state.library) grid.innerHTML = Array.from({ length: 8 }, () => '<div class="skeleton"></div>').join("");
+  try { await fetchLibrary(); } catch (err) { grid.innerHTML = `<div class="empty">Library unavailable: ${esc(err.message)}</div>`; return; }
+  const lib = state.library; const rows = sortRows([...lib.segments]);
+  $("lib-status").textContent = lib.status === "ready" ? `${lib.segments.length} rides · ${lib.summaries_done} analyzed` : `Indexing ${lib.chunks_done}/${lib.chunks_total} chunks · ${lib.segments.length} rides so far`;
+  const pages = Math.max(1, Math.ceil(rows.length / state.pageSize)); state.page = Math.min(state.page, pages - 1);
+  const slice = rows.slice(state.page * state.pageSize, (state.page + 1) * state.pageSize);
+  grid.innerHTML = ""; $("empty").hidden = slice.length > 0 || lib.status !== "ready";
+  if (!slice.length && lib.status !== "ready") grid.innerHTML = Array.from({ length: 8 }, () => '<div class="skeleton"></div>').join("");
+  for (const r of slice) {
+    const card = document.createElement("button"); card.className = "card ride-card" + (state.picked.includes(r.source) ? " picked" : ""); card.setAttribute("aria-label", "Open ride " + r.title);
+    const th = document.createElement("div"); th.className = "thumb"; th.appendChild(thumbEl(r.video_url));
+    th.insertAdjacentHTML("beforeend", `<span class="dur">${(r.duration || 0).toFixed(0)} s</span>` + (r.summary?.peak_risk != null ? `<span class="peak c-${band(r.summary.peak_risk)}">Peak ${Math.round(r.summary.peak_risk)}</span>` : `<span class="peak muted">Analysis pending</span>`));
+    const s = r.summary;
+    const meta = [`${r.camera_id}`, s ? `${s.tracked_objects} objects` : (r.detection_count != null ? `${r.detection_count} detections` : null), s ? `${s.events} candidate event${s.events === 1 ? "" : "s"}` : null].filter(Boolean).map(esc).join(" · ");
+    card.appendChild(th);
+    card.insertAdjacentHTML("beforeend", `<div class="body"><h3>${esc(r.title)}</h3><div class="meta">${meta}</div><div class="caption">${esc(r.caption)}</div></div>`);
+    card.onclick = () => { if (state.compareMode) { togglePick(r.source); } else { location.hash = rideHash(r.source); } };
+    grid.appendChild(card);
+  }
+  const pager = $("pager"); pager.innerHTML = "";
+  if (pages > 1) { const mk = (label, p, dis) => { const b = document.createElement("button"); b.className = "btn sm" + (p === state.page ? " on" : ""); b.textContent = label; b.disabled = !!dis; b.onclick = () => { state.page = p; renderLibrary(); scrollTo(0, 0); }; pager.appendChild(b); };
+    mk("‹", Math.max(0, state.page - 1), state.page === 0); for (let p = 0; p < pages; p++) mk(String(p + 1), p); mk("›", Math.min(pages - 1, state.page + 1), state.page === pages - 1); }
+  clearTimeout(libTimer); if (lib.status !== "ready" || lib.summaries_done < lib.segments.length) libTimer = setTimeout(() => { if ($("view-rides").classList.contains("active")) { fetchLibrary(true).then(renderLibrary).catch(() => {}); } }, 6000);
+}
+$("sort").onchange = $("filter").onchange = () => { state.page = 0; renderLibrary(); };
+function togglePick(src) { state.picked = state.picked.includes(src) ? state.picked.filter((s) => s !== src) : [...state.picked, src].slice(-2); $("compare-text").textContent = state.picked.length === 2 ? "Two rides selected" : state.picked.length === 1 ? "Pick one more ride" : "Pick two rides"; $("compare-go").disabled = state.picked.length !== 2; renderLibrary(); }
+$("compare-mode").onclick = () => { state.compareMode = true; state.picked = []; $("compare-bar").hidden = false; $("compare-mode").classList.add("on"); togglePick(null); state.picked = []; renderLibrary(); };
+$("compare-cancel").onclick = () => { state.compareMode = false; state.picked = []; $("compare-bar").hidden = true; $("compare-mode").classList.remove("on"); renderLibrary(); };
+$("compare-go").onclick = () => { if (state.picked.length === 2) { location.hash = "#/compare/" + encodeURIComponent(state.picked[0]) + "/" + encodeURIComponent(state.picked[1]); $("compare-cancel").click(); } };
+
+/* ---------- Ride workspace ---------- */
+let ride = null, tl = null;
+const FEATURES = [
+  { id: "future", name: "SEE THE FUTURE", desc: "Explore what could happen next.", icon: '<svg viewBox="0 0 24 24"><path d="M4 18 L10 12 L4 6"/><path d="M10 12 H20"/><path d="M14 8 L20 12 L14 16"/></svg>' },
+  { id: "invisible", name: "REVEAL THE INVISIBLE", desc: "Discover what the camera can't see.", icon: '<svg viewBox="0 0 24 24"><path d="M2 12 C5 6 19 6 22 12 C19 18 5 18 2 12 Z"/><circle cx="12" cy="12" r="3"/></svg>' },
+  { id: "memory", name: "STREET MEMORY", desc: "Find similar dangers across NYC.", icon: '<svg viewBox="0 0 24 24"><path d="M4 7 H20"/><path d="M6 12 H18"/><path d="M8 17 H16"/></svg>' },
+  { id: "ask", name: "AI INVESTIGATOR", desc: "Ask GHOST to investigate.", icon: '<svg viewBox="0 0 24 24"><path d="M12 3 L13.5 9 L19 10.5 L13.5 12 L12 18 L10.5 12 L5 10.5 L10.5 9 Z"/><circle cx="19" cy="18" r="2.5"/></svg>' },
+];
+function ensureRide() {
+  if (ride) return;
+  ride = new Player($("screen"), { onSelect: (id) => { renderObject(id); if (state.feature === "future") featureFuture(); if (state.feature === "ask") renderAsk(); }, onZone: (z) => showZone(z) });
+  tl = new Timeline($("timeline"), ride, $("tl-tip"));
+  ride.video.addEventListener("play", () => { $("play").textContent = "Pause"; });
+  ride.video.addEventListener("pause", () => { $("play").textContent = "Play"; });
+  ride.video.addEventListener("timeupdate", () => { $("time").textContent = fmt(ride.video.currentTime); });
+  ride.video.addEventListener("loadedmetadata", () => { $("badge").textContent = `${ride.clip.metadata.filename.replace(".mp4", "")} · offline analysis replayed in sync`; });
+  $("play").onclick = () => { if (ride.video.paused) { ride.video.play().catch(() => {}); } else ride.video.pause(); };
+  $("replay").onclick = () => { ride.video.currentTime = 0; ride.video.play().catch(() => {}); };
+  $("speed").onchange = (e) => { ride.video.playbackRate = Number(e.target.value); };
+  const tog = (id, key) => { $(id).onclick = () => { ride[key] = !ride[key]; $(id).classList.toggle("on", ride[key]); if (key === "showBlind" && ride.showBlind && !ride.zones) fetchZones(); }; };
+  tog("t-risk", "showRisk"); tog("t-objects", "showObjects"); tog("t-paths", "showPaths"); tog("t-blind", "showBlind");
+  $("collapse").onclick = () => { $("workspace").classList.toggle("collapsed"); $("collapse").textContent = $("workspace").classList.contains("collapsed") ? "⇤" : "⇥"; };
+  $("ride-report").onclick = () => { const id = ride.selected ?? ride.clip?.highlight?.id; if (id == null) { toast("Select an object first."); return; } open(api("api/report?" + new URLSearchParams({ source: ride.clip.source, track_id: id, t: ride.video.currentTime || ride.clip.highlight?.t || 0 })), "_blank"); };
+  $("ride-demo").onclick = () => startDemo(ride.clip.source);
+  $("ride-help").onclick = showHelp;
+  $("features").innerHTML = FEATURES.map((f) => `<button class="feature" data-f="${f.id}" aria-label="${f.name}">${f.icon}<b>${f.name}</b><span>${f.desc}</span></button>`).join("");
+  $("features").querySelectorAll(".feature").forEach((b) => { b.onclick = () => selectFeature(b.dataset.f); });
+  $("feature-tabs").innerHTML = FEATURES.map((f) => `<button data-f="${f.id}">${f.name.split(" ").slice(-1)[0] === "FUTURE" ? "Future" : f.name === "REVEAL THE INVISIBLE" ? "Invisible" : f.name === "STREET MEMORY" ? "Memory" : "Ask"}</button>`).join("") + '<button data-f="">All features</button>';
+  $("feature-tabs").querySelectorAll("button").forEach((b) => { b.onclick = () => selectFeature(b.dataset.f || null); });
+  document.addEventListener("keydown", (e) => { if (!$("view-ride").classList.contains("active") || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return; if (e.key === " ") { e.preventDefault(); $("play").click(); } if (e.key === "ArrowRight") ride.video.currentTime += 0.5; if (e.key === "ArrowLeft") ride.video.currentTime -= 0.5; if (e.key === "Escape") resumeVideo(); });
+}
+let currentSource = null;
+async function openRide(source, t) {
+  ensureRide();
+  if (currentSource === source && ride.clip) { if (t != null) ride.video.currentTime = t; return; }
+  currentSource = source; $("badge").textContent = "Analyzing detections and tracks…"; $("obj-card").hidden = true; $("feature-body").hidden = true; resumeVideo(true);
+  if (!localStorage.getItem("ghost-onboarded")) showHelp(true);
+  try {
+    const clip = await ride.load(source, t);
+    $("badge").textContent = `${clip.metadata.filename.replace(".mp4", "")} · offline analysis replayed in sync`;
+    hint(`${clip.tracked_objects} road users tracked · click any object`);
+    if (t == null && clip.highlight) tl.marker = clip.highlight.t;
+    if (state.feature) selectFeature(state.feature, true);
+  } catch (err) { $("badge").textContent = "This ride could not be analyzed: " + err.message; toast(err.message); }
+}
+function hint(text, ms = 3500) { const h = $("hint"); h.textContent = text; h.style.opacity = 1; clearTimeout(hint._t); hint._t = setTimeout(() => { h.style.opacity = 0; }, ms); }
+function renderObject(id) {
+  const card = $("obj-card"); if (!ride?.clip || id == null) { card.hidden = true; return; } const o = ride.objectAt(id); const track = (ride.clip.tracks || []).find((r) => r.id === id);
+  if (!o) { card.hidden = false; card.innerHTML = `<div class="head"><h3>Object ${id}</h3></div><p class="muted small">Not visible at this moment. Scrub the timeline to a time where it appears.</p>`; return; }
+  const f = o.factors || {}; const prim = Object.entries({ "Projected path overlap": f.trajectory_overlap, "Apparent proximity": f.apparent_proximity, "Closing motion": f.closing_motion, "Conflict timing": f.conflict_timing }).sort((a, b) => (b[1] || 0) - (a[1] || 0))[0];
+  const motion = o.risk == null ? "Still analyzing motion." : (f.closing_motion >= .55 ? "Moving toward the estimated bicycle corridor." : f.closing_motion <= .2 ? "Not closing on the estimated corridor." : "Mixed relative motion.");
+  const conf = f.certainty == null ? "Building confidence" : f.certainty >= .75 ? "High confidence" : f.certainty >= .5 ? "Moderate confidence" : "Low confidence";
+  card.hidden = false;
+  card.innerHTML = `<div class="head"><h3>${esc(o.display)} #${o.id}</h3><span class="score big c-${band(o.risk)}">${o.risk == null ? "Analyzing" : Math.round(o.risk)}</span></div>
+    <p class="tiny">Risk Score · 0–100 heuristic, not a crash probability</p>
+    <dl class="kv"><dt>Motion</dt><dd>${motion}</dd><dt>Primary factor</dt><dd>${o.risk == null ? "—" : esc(prim[0])}</dd><dt>Tracking</dt><dd>${conf} · ${esc(o.tracking)} · ${o.hits} frames · YOLO ${o.conf}</dd></dl>
+    <div class="bars">${["trajectory_overlap", "apparent_proximity", "closing_motion", "conflict_timing", "certainty"].map((k) => `<div class="bar"><span>${k.replace("_", " ")}</span><div><i style="width:${Math.round((f[k] || 0) * 100)}%"></i></div><span>${f[k] ?? "—"}</span></div>`).join("")}</div>
+    <canvas class="spark" id="spark"></canvas>
+    <div class="actions"><button class="btn sm primary" id="a-future">See Its Future</button><button class="btn sm" id="a-explain">Explain Risk</button><button class="btn sm" id="a-similar">Find Similar</button></div>`;
+  $("a-future").onclick = () => selectFeature("future"); $("a-explain").onclick = () => { selectFeature("ask"); askQuestion("Why is this object risky?"); }; $("a-similar").onclick = () => { selectFeature("memory"); runMemory(`${o.display.toLowerCase()} near a cyclist in a bike lane`); };
+  const sp = $("spark"); const series = track?.series || []; const ctx = sp.getContext("2d"); sp.width = sp.clientWidth * 2; sp.height = 80;
+  if (series.length > 1) { const dur = tl.dur(); ctx.beginPath(); series.forEach((p, i) => { const x = p.t / dur * sp.width, y = 76 - p.risk / 100 * 70; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.strokeStyle = ACCENT; ctx.lineWidth = 2; ctx.stroke(); const px = (ride.video.currentTime || 0) / dur * sp.width; ctx.fillStyle = "#fff"; ctx.fillRect(px, 0, 2, 80); }
+  if (track?.t_start != null) tl.marker = o.t;
+}
+function selectFeature(id, silent) {
+  state.feature = id; $("features").querySelectorAll(".feature").forEach((b) => b.classList.toggle("on", b.dataset.f === id));
+  $("feature-tabs").hidden = !id; $("features").hidden = !!id; $("feature-title").textContent = id ? FEATURES.find((f) => f.id === id).name : "What would you like to explore?";
+  $("feature-tabs").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.f === id));
+  const body = $("feature-body"); body.hidden = !id; if (!id) { resumeVideo(); return; }
+  if (!ride?.clip) { body.innerHTML = '<div class="skeleton" style="height:120px"></div><p class="tiny" style="margin-top:8px">Analyzing this ride…</p>'; return; }
+  if (id !== "future") { ride.futures = null; $("screen").classList.remove("dim"); }
+  if (id !== "invisible" && !$("t-blind").classList.contains("on")) { ride.showBlind = false; ride.zoneFocus = null; }
+  ({ future: featureFuture, invisible: featureInvisible, memory: featureMemory, ask: renderAsk })[id](silent);
+}
+function resumeVideo(quiet) { if (!ride) return; ride.futures = null; ride.redesign = null; $("screen").classList.remove("dim"); ride.video.playbackRate = Number($("speed").value); if (!quiet) hint("Video resumed", 1500); }
+
+/* Feature 1: futures */
+function candidates() { const fr = ride.lastFrame || ride.frameAt(ride.video.currentTime); const list = fr ? [...fr.objects].filter((o) => o.risk != null).sort((a, b) => b.risk - a.risk).slice(0, 3) : []; return list; }
+async function featureFuture() {
+  const body = $("feature-body"); const id = ride.selected;
+  if (id == null || !ride.objectAt(id)) {
+    const cands = candidates(); const hl = ride.clip.highlight;
+    body.innerHTML = `<h3>Choose an object to investigate.</h3><p class="muted small">Click any tracked object in the video${cands.length ? ", or pick one of the highest scores at this moment:" : "."}</p>
+      <div class="actions">${cands.map((o) => `<button class="btn sm" data-id="${o.id}">${esc(o.display)} ${o.id} · ${Math.round(o.risk)}</button>`).join("")}${hl ? `<button class="btn sm primary" id="go-peak">Jump to peak moment · ${esc(hl.label)} ${hl.id}</button>` : ""}</div>`;
+    body.querySelectorAll("[data-id]").forEach((b) => { b.onclick = () => { ride.selected = Number(b.dataset.id); renderObject(ride.selected); featureFuture(); }; });
+    if (hl) $("go-peak").onclick = () => { ride.video.currentTime = hl.t; ride.selected = hl.id; setTimeout(() => { renderObject(hl.id); featureFuture(); }, 250); };
+    return;
+  }
+  body.innerHTML = `<h3>Explore Possible Futures</h3><p class="tiny">Frame held. Drag the divider on the video to compare what happened with what could happen.</p><div class="scenarios" id="scenarios"><div class="skeleton" style="height:140px"></div></div>
+    <div class="sliders">
+      <label>Reaction delay <b id="v-delay">0.25 s</b><small>How long before the cyclist responds.</small><input id="s-delay" type="range" min="0" max="1" step="0.05" value="0.25" aria-label="Reaction delay"></label>
+      <label>Braking <b id="v-brake">40 %</b><small>Remaining forward progress after braking. Lower is harder braking.</small><input id="s-brake" type="range" min="0.15" max="1" step="0.05" value="0.4" aria-label="Braking adjustment"></label>
+      <label>Prediction horizon <b id="v-horizon">1.2 s</b><small>How far ahead the paths are projected.</small><input id="s-horizon" type="range" min="0.4" max="2" step="0.1" value="1.2" aria-label="Prediction horizon"></label>
+    </div>
+    <p class="small" id="future-explain"></p>
+    <details><summary>Technical Details</summary><pre id="future-tech"></pre></details>
+    <div class="actions"><button class="btn sm" id="future-resume">Resume Video</button></div>`;
+  ["delay", "brake", "horizon"].forEach((k) => { $("s-" + k).oninput = () => { $("v-" + k).textContent = k === "brake" ? Math.round($("s-brake").value * 100) + " %" : Number($("s-" + k).value).toFixed(k === "delay" ? 2 : 1) + " s"; refreshFutures(); }; });
+  $("future-resume").onclick = () => { resumeVideo(); selectFeature(null); };
+  if (!ride.video.paused) { ride.video.playbackRate = 0.35; await wait(reduced ? 0 : 450); }
+  ride.video.pause(); $("screen").classList.add("dim");
+  await refreshFutures();
+}
+let futureReq = 0;
+async function refreshFutures() {
+  const id = ride.selected; if (id == null) return; const seq = ++futureReq;
+  try {
+    const pack = await getJSON("api/futures", { source: ride.clip.source, track_id: id, t: ride.video.currentTime, delay_s: Number($("s-delay")?.value ?? .25), brake: Number($("s-brake")?.value ?? .4), horizon_s: Number($("s-horizon")?.value ?? 1.2) });
+    if (seq !== futureReq) return;
+    if (!ride.futures) { const o = ride.objectAt(id); const vw = ride.clip.width || 1920; if (o) ride.divider = Math.min(.8, Math.max(.2, (o.bbox[0] + o.bbox[2]) / 2 / vw)); hint("Drag the divider: observed on the left, projected on the right", 4000); }
+    ride.futures = pack; ride.anim = 0; renderScenarios(pack);
+  } catch (err) { $("scenarios").innerHTML = `<p class="muted small">${esc(err.message)}</p>`; }
+}
+function renderScenarios(pack) {
+  const box = $("scenarios"); if (!box) return; const q = { continue: "What if nothing changes?", brake: "What if the cyclist slows down?", evade: "What if the cyclist changes direction?" };
+  box.innerHTML = pack.scenarios.map((s) => `<button class="scenario${s.id === ride.scenario ? " on" : ""}" data-s="${s.id}"><b>${s.title.toUpperCase()}</b><span class="lvl c-${s.tone === "red" ? "red" : s.tone === "amber" ? "yellow" : "green"}">${s.level === "overlap" ? "Paths converge" : s.level === "near" ? "Paths come close" : "Paths stay apart"}</span><span>${q[s.id]}</span></button>`).join("");
+  box.querySelectorAll(".scenario").forEach((b) => { b.onclick = () => { ride.scenario = b.dataset.s; ride.anim = 0; renderScenarios(pack); }; });
+  const s = pack.scenarios.find((x) => x.id === ride.scenario) || pack.scenarios[0];
+  $("future-explain").innerHTML = `<b>${esc(s.title)}.</b> ${esc(s.note)} Closest image-space approach ${s.min_distance} of frame width${s.level === "overlap" ? ", inside the uncertainty band" : ""}. Corridor is <em>${esc(pack.corridor_mode)}</em>; evading moves ${esc(pack.evade_direction)}. <span class="muted">${esc(pack.disclaimer)}</span>`;
+  $("future-tech").textContent = JSON.stringify({ delay_s: pack.delay_s, brake: pack.brake, horizon_s: pack.horizon_s, uncertainty: pack.uncertainty, scenarios: pack.scenarios.map((x) => ({ id: x.id, image_score: x.image_score, level: x.level, min_distance: x.min_distance, at_index: x.at_index })) }, null, 2);
+}
+
+/* Feature 2: invisible */
+async function fetchZones() { try { ride.zones = await getJSON("api/occlusion?source=" + encodeURIComponent(ride.clip.source) + "&t=" + (ride.video.currentTime || 0)); } catch (err) { ride.zones = { supported: false, zones: [] }; } return ride.zones; }
+async function featureInvisible() {
+  const body = $("feature-body"); body.innerHTML = '<div class="skeleton" style="height:120px"></div>';
+  ride.showBlind = true; $("t-blind").classList.add("on"); ride.video.pause(); $("screen").classList.add("dim");
+  const z = await fetchZones();
+  if (!z.supported) {
+    body.innerHTML = `<h3>No supported blind spot at this moment</h3><p class="muted small">${esc(z.disclaimer || "GHOST only draws a visibility zone behind a large, low vehicle box that is actually detected. Nothing here is invented.")}</p><div class="actions"><button class="btn sm primary" id="scan">Scan this ride for a blind spot</button><button class="btn sm" id="inv-resume">Resume Video</button></div>`;
+    $("inv-resume").onclick = () => { resumeVideo(); selectFeature(null); };
+    $("scan").onclick = async () => { const r = await getJSON("api/occlusion/first?source=" + encodeURIComponent(ride.clip.source)); if (!r.supported) { toast("No frame in this ride supports a blind zone."); return; } ride.video.currentTime = r.t; await wait(250); featureInvisible(); };
+    return;
+  }
+  body.innerHTML = `<h3>Visibility Limited</h3><p class="muted small">Amber wedges are the image area hidden behind a detected vehicle. Another road user could emerge from there. GHOST does not claim anyone is there.</p><div class="list" id="zones">${z.zones.map((zone) => `<button class="zone-item" data-z="${zone.id}"><b>${esc(zone.display)} #${zone.id} blocks the view</b><span class="small">${esc(zone.note)}</span></button>`).join("")}</div><p class="note">Possible conflicts from an occluded wedge: a pedestrian stepping out, a door opening, or a vehicle pulling out. These are categories of uncertainty, not detections.</p><div class="actions"><button class="btn sm" id="inv-resume">Resume Video</button></div>`;
+  body.querySelectorAll(".zone-item").forEach((b) => { b.onclick = () => { ride.zoneFocus = Number(b.dataset.z); showZone(z.zones.find((x) => x.id === ride.zoneFocus)); }; });
+  $("inv-resume").onclick = () => { resumeVideo(); selectFeature(null); };
+}
+function showZone(z) { if (!z) return; hint(`${z.display} #${z.id}: view beyond this box is unknown. Evidence: the detected box itself.`, 5000); }
+
+/* Feature 3: memory */
+function featureMemory() {
+  const body = $("feature-body"); const hl = ride.selected != null ? ride.objectAt(ride.selected) : null;
+  body.innerHTML = `<h3>The Road Remembers.</h3><p class="muted small">Discover similar moments across rides.</p>
+    <form class="search" id="mem-form" style="margin-top:10px"><input id="mem-q" type="search" placeholder="Find cyclists passing parked vehicles" aria-label="Search similar moments"><button class="btn sm primary" type="submit">Search</button></form>
+    <div class="chips">${["Show cars turning across bike lanes", "Find pedestrians entering the roadway", "Find cyclists passing parked vehicles", "Find close interactions with buses"].map((q) => `<button class="chip" type="button">${q}</button>`).join("")}</div>
+    <p class="tiny" id="mem-note"></p><div class="list" id="mem-list"></div>${state.returnTo ? `<div class="actions"><button class="btn sm" id="mem-back">← Back to original investigation</button></div>` : ""}`;
+  $("mem-form").onsubmit = (e) => { e.preventDefault(); runMemory($("mem-q").value); };
+  body.querySelectorAll(".chip").forEach((c) => { c.onclick = () => { $("mem-q").value = c.textContent; runMemory(c.textContent); }; });
+  if (state.returnTo) $("mem-back").onclick = () => { const r = state.returnTo; state.returnTo = null; location.hash = rideHash(r.source, r.t); setTimeout(() => { ride.selected = r.id; if (r.id != null) renderObject(r.id); }, 600); };
+  runMemory(hl ? `${hl.display.toLowerCase()} near a cyclist in a bike lane` : "cyclist in a bike lane near vehicles and pedestrians");
+}
+async function runMemory(query) {
+  const list = $("mem-list"); if (!list) return; list.innerHTML = '<div class="skeleton" style="height:90px"></div>'; if ($("mem-q") && !$("mem-q").value) $("mem-q").value = query;
+  try {
+    const data = await getJSON("api/memory", { query, source: ride.clip.source });
+    $("mem-note").textContent = data.note || ""; list.innerHTML = "";
+    if (!data.results?.length) list.innerHTML = `<p class="muted small">No similar bike-camera moments returned${data.search_error ? " (" + esc(data.search_error) + ")" : ""}.</p>`;
+    for (const r of data.results || []) {
+      const b = document.createElement("button"); b.className = "hit"; const th = document.createElement("div"); th.className = "thumb"; th.appendChild(thumbEl("api/video?source=" + encodeURIComponent(r.source), 1.2)); b.appendChild(th);
+      b.insertAdjacentHTML("beforeend", `<div><b>${esc(r.filename.replace(".mp4", ""))}</b><span class="tiny">t=${r.t_start}s · similarity ${(r.score || 0).toFixed(2)}${r.location ? " · " + esc(r.location) + " label" : ""}</span><span>${esc(r.caption)}</span></div>`);
+      b.onclick = () => { state.returnTo = { source: ride.clip.source, t: ride.video.currentTime, id: ride.selected }; location.hash = rideHash(r.source, 0); };
+      list.appendChild(b);
+    }
+  } catch (err) { list.innerHTML = `<p class="muted small">${esc(err.message)}</p>`; }
+}
+
+/* Feature 4: ask */
+const chat = [];
+function renderAsk() {
+  const body = $("feature-body");
+  body.innerHTML = `<h3>Ask GHOST.</h3><p class="tiny">Answers are grounded in detections, tracks, risk factors, captions, and retrieved clips.</p>
+    <div class="chips">${["Why is this object risky?", "What happened here?", "What could happen if I brake?", "Find similar situations.", "What evidence supports this?"].map((q) => `<button class="chip" type="button">${q}</button>`).join("")}</div>
+    <div class="chat" id="chat"></div>
+    <form class="search" id="ask-form" style="margin-top:10px"><input id="ask-q" type="text" placeholder="Ask about this moment" aria-label="Ask GHOST"><button class="btn sm primary" type="submit">Ask</button></form>`;
+  body.querySelectorAll(".chip").forEach((c) => { c.onclick = () => askQuestion(c.textContent); });
+  $("ask-form").onsubmit = (e) => { e.preventDefault(); const q = $("ask-q").value.trim(); if (q) { $("ask-q").value = ""; askQuestion(q); } };
+  paintChat();
+}
+function paintChat() {
+  const box = $("chat"); if (!box) return; box.innerHTML = "";
+  for (const m of chat) {
+    const q = document.createElement("div"); q.className = "msg q"; q.textContent = m.q; box.appendChild(q);
+    const a = document.createElement("div"); a.className = "msg a";
+    if (m.pending) a.innerHTML = '<span class="muted">Reading the evidence…</span>';
+    else { a.innerHTML = `<div>${esc(m.answer)}</div>${m.note ? `<p class="tiny" style="margin-top:8px">${m.source === "wandb" ? "Model note" : "Fallback"}: ${esc(m.note)}</p>` : `<p class="tiny" style="margin-top:8px">Deterministic answer. ${esc(m.err || "")}</p>`}<div class="cites">${(m.citations || []).map((c, i) => `<button data-i="${i}">${esc(c.label)}</button>`).join("")}</div><details><summary>Show Technical Reasoning</summary><pre>${esc(JSON.stringify(m.technical, null, 2))}</pre></details>`;
+      a.querySelectorAll(".cites button").forEach((b) => { b.onclick = () => { const c = m.citations[Number(b.dataset.i)]; if (c.source === ride.clip.source) ride.video.currentTime = c.t || 0; else { state.returnTo = { source: ride.clip.source, t: ride.video.currentTime, id: ride.selected }; location.hash = rideHash(c.source, c.t || 0); } }; }); }
+    box.appendChild(a);
+  }
+  box.scrollTop = box.scrollHeight;
+}
+async function askQuestion(q) {
+  if (state.feature !== "ask") selectFeature("ask");
+  const m = { q, pending: true }; chat.push(m); paintChat();
+  try { const d = await getJSON("api/ask", { question: q, source: ride.clip.source, track_id: ride.selected, t: ride.video.currentTime }); Object.assign(m, { pending: false, answer: d.answer, note: d.model_note, source: d.source, err: d.model_error, citations: d.citations, technical: d.technical }); }
+  catch (err) { Object.assign(m, { pending: false, answer: "GHOST could not answer: " + err.message, citations: [], technical: {} }); }
+  paintChat();
+}
+
+/* ---------- Compare ---------- */
+let comparePlayers = [];
+async function openCompare(a, b) {
+  const root = $("compare"); root.innerHTML = ""; comparePlayers.forEach((p) => { Player.all.splice(Player.all.indexOf(p), 1); }); Timeline.all = Timeline.all.filter((t) => !comparePlayers.includes(t.player)); comparePlayers = [];
+  for (const src of [a, b]) {
+    const pane = document.createElement("div"); pane.className = "pane";
+    pane.innerHTML = `<div class="screen"></div><div class="controls"><button class="btn sm c-play">Play</button><button class="btn sm ghost c-replay">Replay</button><span class="time c-time">0.00 s</span></div><h3 class="c-title">Loading…</h3><div class="stats c-stats"></div><div class="card tl-wrap"><canvas class="c-tl"></canvas></div><div class="actions"><a class="btn sm primary c-open" href="${rideHash(src)}">Investigate this ride</a></div>`;
+    root.appendChild(pane);
+    const p = new Player(pane.querySelector(".screen")); p.showPaths = false; comparePlayers.push(p);
+    new Timeline(pane.querySelector(".c-tl"), p, null);
+    pane.querySelector(".c-play").onclick = () => { if (p.video.paused) { p.video.play().catch(() => {}); if (syncOn) comparePlayers.forEach((o) => o !== p && o.video.play().catch(() => {})); } else { p.video.pause(); if (syncOn) comparePlayers.forEach((o) => o.video.pause()); } };
+    pane.querySelector(".c-replay").onclick = () => { p.video.currentTime = 0; p.video.play().catch(() => {}); };
+    p.video.addEventListener("timeupdate", () => { pane.querySelector(".c-time").textContent = fmt(p.video.currentTime); if (syncOn && !p.video.paused) { const ratio = p.video.currentTime / (Number(p.clip?.metadata.duration) || 5); comparePlayers.forEach((o) => { if (o !== p && o.clip) { const want = ratio * (Number(o.clip.metadata.duration) || 5); if (Math.abs(o.video.currentTime - want) > 0.25) o.video.currentTime = want; } }); } });
+    p.video.addEventListener("play", () => { pane.querySelector(".c-play").textContent = "Pause"; }); p.video.addEventListener("pause", () => { pane.querySelector(".c-play").textContent = "Play"; });
+    try {
+      const clip = await p.load(src); const ev = eventsOf(clip); const hl = clip.highlight;
+      pane.querySelector(".c-title").textContent = clip.metadata.filename.replace(".mp4", "");
+      pane.querySelector(".c-stats").innerHTML = `<span><b>${clip.tracked_objects}</b> objects</span><span><b>${clip.detection_count}</b> detections</span><span>Peak <b class="c-${band(hl?.score)}">${hl ? Math.round(hl.score) : "—"}</b>${hl ? ` · ${esc(hl.label)} ${hl.id} at ${hl.t}s` : ""}</span><span><b>${ev.length}</b> candidate events</span><span>${clip.classes_seen.map(esc).join(", ")}</span>`;
+    } catch (err) { pane.querySelector(".c-title").textContent = "Unavailable: " + err.message; }
+  }
+}
+let syncOn = false; $("sync").onclick = () => { syncOn = !syncOn; $("sync").classList.toggle("on", syncOn); };
+
+/* ---------- Help / onboarding ---------- */
+function showHelp(first) {
+  const layer = $("layer"); layer.innerHTML = `<div class="overlay" role="dialog" aria-modal="true"><div class="card modal"><p class="tiny" style="color:var(--accent);letter-spacing:.16em">GHOST NYC</p><h2>Choose a ride. Pick a feature. Explore what could happen.</h2><ol><li><b>Choose a ride</b> from the library. Every clip is real NYC GoPro footage.</li><li><b>Pick a feature</b> on the right: futures, blind spots, street memory, or ask GHOST.</li><li><b>Click any object</b> in the video to see its Risk Score and why it moved.</li></ol><p class="tiny" style="margin-top:14px">Space plays and pauses. Arrow keys step through time. Risk Scores are 0–100 heuristics, not crash probabilities.</p><div class="actions"><button class="btn primary" id="help-ok">${first ? "Got it" : "Close"}</button>${first ? '<button class="btn ghost" id="help-demo">Show me a quick demo</button>' : ""}</div></div></div>`;
+  $("help-ok").onclick = () => { layer.innerHTML = ""; localStorage.setItem("ghost-onboarded", "1"); };
+  if (first) $("help-demo").onclick = () => { layer.innerHTML = ""; localStorage.setItem("ghost-onboarded", "1"); startDemo(ride?.clip?.source); };
+}
+$("nav-help").onclick = () => showHelp(false);
+
+/* ---------- Demo ---------- */
+function bestSource() {
+  const rows = (state.library?.segments || []).filter((r) => r.summary?.peak_risk != null);
+  rows.sort((a, b) => (b.summary.peak_risk + (b.summary.occlusion_t != null ? 5 : 0) + b.summary.events * 2) - (a.summary.peak_risk + (a.summary.occlusion_t != null ? 5 : 0) + a.summary.events * 2));
+  return rows[0]?.source || null;
+}
+async function startDemo(source) {
+  if (state.demo) return;
+  try { await fetchLibrary(); } catch {}
+  source = source || bestSource() || state.library?.segments?.[0]?.source;
+  if (!source) { toast("Library is still loading. Try again in a moment."); return; }
+  location.hash = rideHash(source); await wait(100); ensureRide(); await openRide(source); await wait(400);
+  const steps = [
+    { title: "GHOST NYC — See the City Before It Happens.", text: "Real NYC bicycle footage with live object tracking and Risk Scores.", run: async () => { ride.selected = null; selectFeature(null); ride.video.currentTime = 0; ride.video.playbackRate = 1; await ride.video.play().catch(() => {}); }, ms: 8000 },
+    { title: "The highest-scoring interaction", text: "GHOST jumps to the moment with the strongest supported Risk Score and explains why it rose.", run: async () => { const hl = ride.clip.highlight; if (!hl) return; ride.video.pause(); ride.video.currentTime = hl.t; ride.selected = hl.id; await wait(300); renderObject(hl.id); }, ms: 8000 },
+    { title: "See the Future", text: "Three deterministic image-space futures: continue, brake, evade. Drag the divider to compare.", run: async () => { if (ride.selected == null) ride.selected = ride.clip.highlight?.id; await selectFeature("future"); await wait(1500); ride.scenario = "brake"; if (ride.futures) renderScenarios(ride.futures); await wait(3500); ride.scenario = "evade"; if (ride.futures) renderScenarios(ride.futures); }, ms: 12000 },
+    { title: "Reveal the Invisible", text: "A visible vehicle hides part of the view. GHOST shows the wedge and never invents who might be in it.", run: async () => { const r = await getJSON("api/occlusion/first?source=" + encodeURIComponent(ride.clip.source)); if (!r.supported) { toast("This ride has no supported blind spot. Skipping."); return "skip"; } ride.futures = null; ride.video.currentTime = r.t; await wait(250); await selectFeature("invisible"); }, ms: 9000 },
+    { title: "Street Memory", text: "VAST semantic search finds similar moments across the NYC bike rides.", run: async () => { ride.showBlind = false; $("t-blind").classList.remove("on"); selectFeature("memory"); }, ms: 9000 },
+    { title: "Ask GHOST", text: "The AI investigator answers from detections, tracks, factors, captions, and retrieved evidence.", run: async () => { selectFeature("ask"); await askQuestion("Why is this object risky?"); }, ms: 10000 },
+    { title: "GHOST doesn't just detect danger.", text: "It helps us understand, investigate, and potentially prevent it. Explore any ride yourself.", run: async () => { resumeVideo(true); selectFeature(null); ride.video.currentTime = 0; await ride.video.play().catch(() => {}); }, ms: 6000 },
+  ];
+  let i = 0, cancelled = false, advance = null;
+  const bar = document.createElement("div"); bar.className = "card demo-bar"; document.body.appendChild(bar); state.demo = bar;
+  const paint = () => { bar.innerHTML = `<b>${esc(steps[i].title)}</b><div class="btns"><button class="btn sm" id="d-next">${i === steps.length - 1 ? "Finish" : "Next"}</button><button class="btn sm ghost" id="d-exit">Exit</button></div><span class="small muted">${esc(steps[i].text)}</span><div class="dots">${steps.map((_, k) => `<i class="${k <= i ? "done" : ""}"></i>`).join("")}</div>`; $("d-next").onclick = () => advance && advance(); $("d-exit").onclick = () => { cancelled = true; advance && advance(); }; };
+  for (i = 0; i < steps.length && !cancelled; i++) {
+    paint(); let res; try { res = await steps[i].run(); } catch (err) { toast(err.message); }
+    if (cancelled) break; if (res === "skip") continue;
+    await new Promise((r) => { advance = r; setTimeout(r, steps[i].ms); }); advance = null;
+  }
+  bar.remove(); state.demo = null;
+}
+$("nav-demo").onclick = () => startDemo(); $("hero-demo").onclick = () => startDemo();
+
+/* ---------- Challenges ---------- */
+async function renderChallenges() {
+  const box = $("challenges"); try { await fetchLibrary(); } catch { box.innerHTML = '<p class="muted">Library unavailable.</p>'; return; }
+  const rows = (state.library.segments || []).filter((r) => r.summary);
+  const withVehicle = rows.filter((r) => r.summary.top_vehicle).sort((a, b) => b.summary.top_vehicle.risk - a.summary.top_vehicle.risk)[0];
+  const withOcc = rows.filter((r) => r.summary.occlusion_t != null).sort((a, b) => b.summary.peak_risk - a.summary.peak_risk)[0];
+  const best = rows.sort((a, b) => b.summary.peak_risk - a.summary.peak_risk)[0];
+  const items = [
+    { t: "Find the riskiest vehicle", d: withVehicle ? `GHOST opens ${withVehicle.title} and selects ${withVehicle.summary.top_vehicle.label} ${withVehicle.summary.top_vehicle.id}, peak ${Math.round(withVehicle.summary.top_vehicle.risk)}.` : "No analyzed ride has a scored vehicle yet.", ok: !!withVehicle, go: async () => { location.hash = rideHash(withVehicle.source, withVehicle.summary.peak_t); await wait(600); ride.selected = withVehicle.summary.top_vehicle.id; const tr = ride.clip.tracks.find((x) => x.id === ride.selected); const t = tr?.series?.length ? tr.series.reduce((m, p) => p.risk > m.risk ? p : m).t : withVehicle.summary.peak_t; ride.video.currentTime = t; await wait(250); renderObject(ride.selected); hint("Riskiest vehicle selected. Click Explain Risk to hear why."); } },
+    { t: "Reveal a hidden hazard", d: withOcc ? `Open ${withOcc.title} where a detected vehicle hides part of the view.` : "No analyzed ride has a supported blind spot yet.", ok: !!withOcc, go: async () => { location.hash = rideHash(withOcc.source, withOcc.summary.occlusion_t); await wait(600); selectFeature("invisible"); } },
+    { t: "Explore an alternative future", d: best ? `Freeze ${best.title} at its peak and compare continue, brake, and evade.` : "Analysis still running.", ok: !!best, go: async () => { location.hash = rideHash(best.source, best.summary.peak_t); await wait(600); ride.selected = best.summary.peak_id; renderObject(ride.selected); selectFeature("future"); } },
+    { t: "Find a similar encounter", d: best ? `Search VAST for moments like ${best.summary.peak_label} ${best.summary.peak_id} in ${best.title}.` : "Analysis still running.", ok: !!best, go: async () => { location.hash = rideHash(best.source, best.summary.peak_t); await wait(600); ride.selected = best.summary.peak_id; renderObject(ride.selected); selectFeature("memory"); } },
+  ];
+  box.innerHTML = items.map((it, i) => `<button class="card challenge" data-i="${i}" ${it.ok ? "" : "disabled"}><h3>${it.t}</h3><p class="muted small">${esc(it.d)}</p></button>`).join("");
+  box.querySelectorAll(".challenge").forEach((b) => { b.onclick = () => items[Number(b.dataset.i)].go().catch((e) => toast(e.message)); });
+  if (!rows.length) setTimeout(() => { if ($("view-home").classList.contains("active")) fetchLibrary(true).then(renderChallenges).catch(() => {}); }, 6000);
+}
+
+/* ---------- boot ---------- */
+$("hero-video").src = api("api/video") + "#t=2.2";
+(function loop() { for (const p of Player.all) p.draw(); for (const t of Timeline.all) t.draw(); requestAnimationFrame(loop); })();
+route();
+</script>
+</body>
+</html>

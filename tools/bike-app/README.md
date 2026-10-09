@@ -1,9 +1,7 @@
-# Bike app (teammate slot)
+# Ghost NYC Builder (Bike)
 
-Drop your teammate’s bike build here:
+Teammate app pulled from the live workshop Deployment (`hackathon-app` ConfigMap).
 
-- Put the main page at `tools/bike-app/index.html`
-- Optional helpers as sibling `.py` files if needed
+Health reports `{"app":"ghost-nyc"}`. Serves the NYC bike / risk / futures UI from `index.html`.
 
-The deployed app serves `/app/bike` from `index.html` when this file exists;
-otherwise it falls back to the interim cyclist search page in `tools/ghost-app/bike.html`.
+Our GHOST what-if lab lives in `tools/ghost-app/` (not currently mounted on `/app` while this is deployed).
