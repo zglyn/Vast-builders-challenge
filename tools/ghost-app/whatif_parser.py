@@ -49,22 +49,54 @@ def _extract_json(text: str) -> dict[str, Any]:
         raise ScenarioValidationError("Model did not return JSON")
 
 
+def _match_labeled_target(prompt: str, event: dict) -> list[int]:
+    """Pick the vehicle the user named (truck/car/…) so the other stays real footage."""
+    p = prompt.lower()
+    candidates: list[tuple[int, str]] = []
+    if event.get("id_a") is not None:
+        candidates.append((int(event["id_a"]), str(event.get("label_a") or "").lower()))
+    if event.get("id_b") is not None:
+        candidates.append((int(event["id_b"]), str(event.get("label_b") or "").lower()))
+    for kw in ("truck", "lorry", "semi", "bus", "van", "suv", "car"):
+        if kw not in p:
+            continue
+        for tid, lab in candidates:
+            if kw in lab:
+                return [tid]
+    for kw in ("white", "black", "red", "blue"):
+        if kw not in p:
+            continue
+        for tid, lab in candidates:
+            if kw in lab:
+                return [tid]
+    return []
+
+
+def _default_single_actor(event: dict) -> list[int]:
+    """Primary actor only — leave the other vehicle as sharp OBSERVED pixels."""
+    if event.get("id_a") is not None:
+        return [int(event["id_a"])]
+    if event.get("id_b") is not None:
+        return [int(event["id_b"])]
+    return []
+
+
 def _heuristic_parse(prompt: str, event: dict) -> dict[str, Any]:
     """Deterministic fallback when LLM unavailable — maps keywords to interventions."""
     p = prompt.lower()
-    targets = []
-    if event.get("id_a") is not None:
-        targets.append(int(event["id_a"]))
-    if event.get("id_b") is not None:
-        targets.append(int(event["id_b"]))
 
-    # Unsupported hard asks
-    for bad in ("barrier", "into the wall", "hit the", "crash into", "kill", "fly", "teleport"):
-        if bad in p and "brake" not in p:
+    # Creative/comic asks are allowed as labeled hypotheticals (export adds gags).
+    # Only reject clearly impossible non-traffic asks.
+    for bad in ("kill", "fly", "teleport", "explode the city"):
+        if bad in p:
             raise ScenarioValidationError(
                 f"That request is not supported by the ghost engine. {SUPPORTED_HELP}",
                 unsupported=True,
             )
+
+    move_everyone = any(
+        w in p for w in ("everyone", "both", "all vehicles", "all cars", "cautious")
+    )
 
     intervention = "maintain_velocity"
     params: dict[str, Any] = {}
@@ -77,13 +109,15 @@ def _heuristic_parse(prompt: str, event: dict) -> dict[str, Any]:
     elif "later" in p and "brake" in p:
         intervention = "later_braking"
         params = {"delaySec": 0.8, "brakeIntensity": 0.7}
-    elif ("stronger" in p or "harder" in p) and "brake" in p:
+    elif ("stronger" in p or "harder" in p or "slam" in p) and (
+        "brake" in p or "break" in p
+    ):
         intervention = "stronger_braking"
         params = {"brakeIntensity": 0.95, "delaySec": 0.25}
-    elif ("weaker" in p or "lighter" in p) and "brake" in p:
+    elif ("weaker" in p or "lighter" in p) and ("brake" in p or "break" in p):
         intervention = "weaker_braking"
         params = {"brakeIntensity": 0.3, "delaySec": 0.3}
-    elif "brake" in p or "brak" in p:
+    elif "brake" in p or "brak" in p or "breaks" in p or "broke" in p:
         intervention = "earlier_braking"
         params = {"delaySec": 0.15, "brakeIntensity": 0.75}
     elif "wait" in p or "delayed lane" in p or "lane change" in p and "wait" in p:
@@ -95,29 +129,47 @@ def _heuristic_parse(prompt: str, event: dict) -> dict[str, Any]:
     elif "cautious" in p or "everyone" in p:
         intervention = "stronger_braking"
         params = {"brakeIntensity": 0.9, "delaySec": 0.2}
-        # all involved
+        move_everyone = True
     elif "exclude" in p or "remove" in p:
         intervention = "exclude_vehicle"
     elif "heading" in p:
         intervention = "maintain_heading"
-    elif "swerve" in p or "into the barrier" in p:
-        raise ScenarioValidationError(
-            f"Swerve-into-barrier style prompts are not supported. {SUPPORTED_HELP}",
-            unsupported=True,
-        )
+    elif "swerve" in p or "spin" in p:
+        # Creative comic maneuver — maps to a steer intervention (not a real crash claim)
+        intervention = "delayed_lane_change"
+        params = {"delaySec": 0.1, "steerIntensity": 0.85}
+    elif "crash" in p or "collide" in p or "smash" in p or "boom" in p:
+        # Storytelling prompt: strong brake + comic export overlay handles the gag
+        intervention = "stronger_braking"
+        params = {"brakeIntensity": 0.95, "delaySec": 0.05}
 
-    # Mentions of track numbers
+    # Mentions of track numbers win
+    targets: list[int] = []
     for m in re.finditer(r"(?:track|#)\s*(\d+)", p):
         tid = int(m.group(1))
         if tid not in targets:
             targets.append(tid)
+
+    if not targets:
+        if move_everyone:
+            if event.get("id_a") is not None:
+                targets.append(int(event["id_a"]))
+            if event.get("id_b") is not None:
+                targets.append(int(event["id_b"]))
+        else:
+            # Single actor: named vehicle, else primary — leave the other car sharp
+            named = _match_labeled_target(p, event)
+            targets = named[:1] if named else _default_single_actor(event)
 
     return {
         "targetTrackIds": targets,
         "intervention": intervention,
         "params": params,
         "horizonSec": 1.5,
-        "rationale": f"Heuristic parse of prompt (no LLM). Mapped to {intervention}.",
+        "rationale": (
+            f"Heuristic parse (no LLM). Mapped to {intervention}; "
+            f"moving track(s) {targets} only — others stay OBSERVED."
+        ),
     }
 
 
@@ -194,6 +246,35 @@ def parse_whatif(
 
     try:
         scenario = validate_scenario(raw, known_track_ids=known_track_ids)
+        # If LLM returned both event vehicles for a single-actor ask, narrow to one
+        # so the lead car is not erased/re-pasted (that was washing it out).
+        prompt_l = prompt.lower()
+        move_everyone = any(
+            w in prompt_l for w in ("everyone", "both", "all vehicles", "all cars", "cautious")
+        )
+        single_actor = scenario["intervention"] in {
+            "earlier_braking",
+            "later_braking",
+            "stronger_braking",
+            "weaker_braking",
+            "delayed_reaction",
+            "delayed_lane_change",
+            "aborted_lane_change",
+            "maintain_heading",
+            "maintain_velocity",
+        }
+        if (
+            single_actor
+            and not move_everyone
+            and len(scenario.get("targetTrackIds") or []) > 1
+            and not re.search(r"(?:track|#)\s*\d+", prompt_l)
+        ):
+            named = _match_labeled_target(prompt_l, event)
+            scenario["targetTrackIds"] = named[:1] if named else scenario["targetTrackIds"][:1]
+            scenario["rationale"] = (
+                (scenario.get("rationale") or "")
+                + f" [narrowed to track {scenario['targetTrackIds']} so other vehicles stay OBSERVED]"
+            )
     except ScenarioValidationError as e:
         if e.unsupported:
             return {

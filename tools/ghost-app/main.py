@@ -13,12 +13,16 @@ from typing import Any
 from urllib.parse import quote
 
 import requests
-from flask import Flask, Response, jsonify, request, stream_with_context
+from flask import Flask, Response, jsonify, request, send_file, stream_with_context
 
+from edit_spec import EditSpecError, build_edit_spec, validate_edit_spec
 from ensemble import run_ensemble
 from ghost_engine import analyze_detections
 from scenario_schema import SUPPORTED_INTERVENTIONS, ScenarioValidationError, validate_scenario
+from video_edit import get_job, start_generate_job
 from whatif_parser import parse_whatif
+
+_VIDEO_CACHE_DIR = os.environ.get("GHOST_VIDEO_CACHE", "/tmp/ghost-exports/videos")
 
 app = Flask(__name__)
 
@@ -298,6 +302,36 @@ def api_demo():
         return jsonify({"error": str(e)}), 500
 
 
+@app.post("/api/search")
+def api_search():
+    """Proxy VSS hybrid search (used by Bike tab + teammates). Credentials stay server-side."""
+    body = request.get_json(force=True, silent=True) or {}
+    query = (body.get("query") or "").strip()
+    if not query:
+        return jsonify({"ok": False, "message": "query required"}), 400
+    payload = {
+        "query": query,
+        "top_k": int(body.get("top_k") or 12),
+        "llm_top_n": int(body.get("llm_top_n") or 3),
+        "min_similarity": float(body.get("min_similarity") or 0.28),
+        "time_filter": body.get("time_filter") or "all",
+        "include_public": bool(body.get("include_public", True)),
+    }
+    if body.get("metadata_filters"):
+        payload["metadata_filters"] = body["metadata_filters"]
+    if body.get("tags"):
+        payload["tags"] = body["tags"]
+    try:
+        r = _vss("POST", "/api/v1/search", json_body=payload, timeout=120)
+        if r.status_code >= 400:
+            return jsonify({"ok": False, "message": r.text[:400]}), r.status_code
+        data = r.json()
+        data["ok"] = True
+        return jsonify(data)
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "message": str(e)[:400]}), 500
+
+
 @app.get("/api/video")
 def api_video():
     """Proxy VSS stream so the JWT never reaches the browser."""
@@ -438,9 +472,214 @@ def api_whatif_simulate():
     return jsonify(result)
 
 
+@app.post("/api/whatif/editspec")
+def api_whatif_editspec():
+    """Build Phase-0 EditSpec from analysis + ensemble run (no pixels)."""
+    body = request.get_json(force=True, silent=True) or {}
+    try:
+        analysis = body.get("analysis")
+        if analysis is None:
+            analysis = get_demo().get("analysis") or {}
+        event = body.get("event") or analysis.get("primary_event") or {}
+        scenario = body.get("scenario") or {}
+        ensemble_result = body.get("ensemble") or body.get("ensemble_result")
+        if not ensemble_result:
+            return jsonify({"ok": False, "message": "ensemble result required (run simulate first)"}), 400
+        source = body.get("source") or get_demo().get("demo_source") or DEMO_SOURCE
+        spec = build_edit_spec(
+            source=source,
+            analysis=analysis,
+            event=event,
+            scenario=scenario,
+            ensemble_result=ensemble_result,
+            run_index=body.get("run_index"),
+            duration_sec=float(body.get("duration_sec") or 3.0),
+            fps=float(body.get("fps") or 10.0),
+        )
+        return jsonify({"ok": True, "edit_spec": spec, "label": "HYPOTHETICAL"})
+    except EditSpecError as e:
+        return jsonify({"ok": False, "message": str(e)}), 400
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "message": str(e)[:400]}), 500
+
+
+def _cached_demo_video(source: str) -> str:
+    """Download VSS MP4 once and reuse for real-footage exports."""
+    import hashlib
+
+    os.makedirs(_VIDEO_CACHE_DIR, exist_ok=True)
+    digest = hashlib.sha256(source.encode()).hexdigest()[:16]
+    path = os.path.join(_VIDEO_CACHE_DIR, f"{digest}.mp4")
+    if os.path.isfile(path) and os.path.getsize(path) > 100_000:
+        return path
+    token = _login()
+    upstream = (
+        f"{VSS_URL}/api/v1/videos/stream?source={quote(source, safe='')}&token={quote(token)}"
+    )
+    with requests.get(upstream, stream=True, timeout=180) as r:
+        r.raise_for_status()
+        tmp = path + ".partial"
+        with open(tmp, "wb") as f:
+            for chunk in r.iter_content(chunk_size=256 * 1024):
+                if chunk:
+                    f.write(chunk)
+        os.replace(tmp, path)
+    return path
+
+
+@app.post("/api/whatif/generate")
+def api_whatif_generate():
+    """Export short what-if clip: real vehicle pixels moved along the ghost path.
+
+    Fast CPU defaults: comic gags+SFX on, ~2s@5fps, no Phase-2 Poisson/GPU,
+    no temporal/split unless requested. Falls back to synthetic if decode fails.
+    """
+    body = request.get_json(force=True, silent=True) or {}
+    try:
+        if body.get("edit_spec"):
+            spec = validate_edit_spec(body["edit_spec"])
+        else:
+            analysis = body.get("analysis")
+            if analysis is None:
+                analysis = get_demo().get("analysis") or {}
+            event = body.get("event") or analysis.get("primary_event") or {}
+            scenario = body.get("scenario") or {}
+            ensemble_result = body.get("ensemble") or body.get("ensemble_result")
+            if not ensemble_result:
+                return jsonify({"ok": False, "message": "edit_spec or ensemble required"}), 400
+            source = body.get("source") or get_demo().get("demo_source") or DEMO_SOURCE
+            spec = build_edit_spec(
+                source=source,
+                analysis=analysis,
+                event=event,
+                scenario=scenario,
+                ensemble_result=ensemble_result,
+                run_index=body.get("run_index"),
+                duration_sec=float(body.get("duration_sec") or 2.0),
+                fps=float(body.get("fps") or 5.0),
+            )
+        synthetic = bool(body.get("synthetic", False))
+        # Defaults: comic on. Quality = sharper truck via CPU Poisson (not a GPU Job).
+        quality_mode = bool(body.get("quality_mode", False))
+        generative_refine = bool(body.get("generative_refine", False)) or quality_mode
+        comic_mode = bool(body.get("comic_mode", True))
+        temporal_polish = bool(body.get("temporal_polish", False))
+        split_screen = bool(body.get("split_screen", False))
+        max_width = body.get("max_width")
+        if max_width is not None:
+            max_width = int(max_width)
+        elif quality_mode:
+            max_width = 960
+        video_path = None
+        if not synthetic:
+            try:
+                video_path = _cached_demo_video(spec["source"])
+            except Exception as e:  # noqa: BLE001
+                print("video cache failed:", e, flush=True)
+                synthetic = True
+        job = start_generate_job(
+            spec,
+            synthetic=synthetic,
+            temporal_polish=temporal_polish,
+            split_screen=split_screen,
+            generative_refine=generative_refine,
+            comic_mode=comic_mode,
+            quality_mode=quality_mode,
+            max_width=max_width,
+            video_path=video_path,
+        )
+        if quality_mode:
+            notice = (
+                "Quality export (CPU): tight erase protects nearby cars, rectangular truck paste, "
+                "Poisson blend. GPU would not fix neighbor smear here. Hypothetical — not a crash prediction."
+            )
+        elif comic_mode:
+            notice = (
+                "Fast CPU comedy export: real vehicle on a hypothetical path with cartoon gags/SFX. "
+                "Not a crash prediction. Tip: enable Quality if the truck looks washed out."
+            )
+        else:
+            notice = spec["disclaimer"]
+        return jsonify(
+            {
+                "ok": True,
+                "job": {
+                    "id": job["id"],
+                    "status": job["status"],
+                    "progress": job.get("progress"),
+                    "cache_hit": job.get("cache_hit", False),
+                    "options": job.get("options"),
+                },
+                "edit_spec": spec,
+                "notice": notice,
+            }
+        )
+    except EditSpecError as e:
+        return jsonify({"ok": False, "message": str(e)}), 400
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"ok": False, "message": str(e)[:400]}), 500
+
+
+@app.get("/api/whatif/generate/<job_id>")
+def api_whatif_generate_status(job_id: str):
+    job = get_job(job_id)
+    if not job:
+        return jsonify({"ok": False, "message": "unknown job_id"}), 404
+    out = {
+        "ok": True,
+        "id": job["id"],
+        "status": job["status"],
+        "progress": job.get("progress"),
+        "error": job.get("error"),
+        "result": job.get("result"),
+        "report": job.get("report"),
+        "options": job.get("options"),
+        "download": f"api/whatif/generate/{job_id}/download" if job.get("status") == "done" else None,
+        "notice": (job.get("spec") or {}).get("disclaimer"),
+    }
+    return jsonify(out)
+
+
+@app.get("/api/whatif/generate/<job_id>/download")
+def api_whatif_generate_download(job_id: str):
+    job = get_job(job_id)
+    if not job or job.get("status") != "done":
+        return jsonify({"ok": False, "message": "export not ready"}), 404
+    path = job.get("path")
+    if not path or not os.path.isfile(path):
+        return jsonify({"ok": False, "message": "export file missing"}), 404
+    return send_file(path, mimetype="video/mp4", as_attachment=True, download_name=f"ghost-edit-{job_id}.mp4")
+
+
+def _page(name: str) -> str:
+    """Load an HTML page from the app directory (ConfigMap-mounted)."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), name)
+    if os.path.isfile(path):
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+    if name == "creative.html":
+        return CREATIVE_HTML_FALLBACK
+    return INDEX_HTML
+
+
 @app.get("/")
 def index():
     return INDEX_HTML
+
+
+@app.get("/bike")
+def bike_page():
+    """Teammate bike build slot — serves bike.html (or tools/bike-app overlay when present)."""
+    bike_app = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bike-app", "index.html")
+    if os.path.isfile(bike_app):
+        with open(bike_app, encoding="utf-8") as f:
+            return f.read()
+    return _page("bike.html")
+
+
+@app.get("/creative")
+def creative_page():
+    return _page("creative.html")
 
 
 INDEX_HTML = r"""<!DOCTYPE html>
@@ -492,8 +731,14 @@ button {
   padding:8px 12px; border-radius:3px; cursor:pointer; font:inherit; font-size:0.78rem;
 }
 button:hover { border-color: var(--blue); }
+button:disabled { opacity:0.4; cursor:not-allowed; }
 button.primary { background: #1d2b24; border-color:#2f5a45; color: var(--green); }
 button.danger { background: var(--danger-bg); border-color:#6a3030; color: var(--red); }
+button.export {
+  width:100%; padding:12px 14px; font-size:0.85rem; font-weight:600;
+  background: rgba(255,193,77,0.12); border-color: var(--amber); color: var(--amber);
+}
+button.export:not(:disabled):hover { background: rgba(255,193,77,0.22); }
 input[type=range] { flex:1; accent-color: var(--amber); }
 .legend { display:flex; gap:14px; font-size:0.72rem; color:var(--muted); }
 .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
@@ -572,6 +817,13 @@ input:-webkit-autofill:focus,
 .view-toggle { display:flex; gap:6px; }
 .view-toggle button.active { border-color:var(--green); color:var(--green); }
 .view-toggle button.active.danger { border-color:var(--red); color:var(--red); }
+.site-nav { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+.site-nav a {
+  font-size:0.72rem; color:var(--muted); text-decoration:none;
+  border:1px solid var(--line); padding:6px 12px; border-radius:3px;
+}
+.site-nav a:hover { border-color:var(--blue); color:var(--text); }
+.site-nav a.on { border-color:var(--amber); color:var(--amber); background:rgba(255,193,77,0.08); }
 </style>
 </head>
 <body>
@@ -579,6 +831,11 @@ input:-webkit-autofill:focus,
   <header>
     <div>
       <div class="brand">GH<span>O</span>ST</div>
+      <div class="site-nav">
+        <a class="on" href="/app/">GHOST — your what-if lab</a>
+        <a href="/app/bike">Bike — teammate build</a>
+        <a href="/app/creative">Creative — comedy export</a>
+      </div>
       <div class="status" id="status">Loading demo…</div>
     </div>
     <div class="tag">Counterfactual traffic intelligence — reconstruct motion, then ask: what if they didn’t brake?</div>
@@ -639,16 +896,31 @@ input:-webkit-autofill:focus,
         <div class="lab-block" id="tab-whatif">
           <div class="hyp-banner">Simulated driver behavior under assumed profiles. Not a prediction or a finding of fault. OBSERVATIONS stay on Reality; ghosts are HYPOTHETICAL.</div>
           <h2>Ask a What If</h2>
-          <textarea id="whatifPrompt" rows="3" placeholder="e.g. What if the white truck had braked earlier?"></textarea>
+          <textarea id="whatifPrompt" rows="3" placeholder="e.g. What if the truck breaks / swerves and they almost crash?"></textarea>
           <div class="row" style="margin-top:8px">
-            <button class="primary" id="btnParse">Parse scenario</button>
-            <button class="danger" id="btnSimulate" disabled>Run ensemble</button>
+            <button class="primary" id="btnParse">1 · Parse scenario</button>
+            <button class="danger" id="btnSimulate" disabled>2 · Run ensemble</button>
             <label class="status"><input type="checkbox" id="useLlm" checked/> use W&amp;B LLM</label>
           </div>
           <div class="chips" id="chips"></div>
           <div class="status" id="parseMsg"></div>
           <div class="progress" id="simProgress"></div>
           <div class="outcome" id="outcome"></div>
+
+          <h2 style="margin-top:14px">Export clip</h2>
+          <div class="hyp-banner">Your GHOST lab. Teammate bike work: <a href="/app/bike" style="color:var(--green)">Bike tab</a>. Comedy gags: <a href="/app/creative" style="color:var(--amber)">Creative</a>. Not a crash prediction.</div>
+          <div class="row" style="margin-top:6px">
+            <label class="status"><input type="checkbox" id="optQuality"/> Quality (sharper truck, Poisson CPU)</label>
+            <label class="status"><input type="checkbox" id="optComic"/> comic gags + SFX</label>
+            <label class="status"><input type="checkbox" id="optSplit"/> Reality|Generated split</label>
+            <label class="status"><input type="checkbox" id="optTemporal"/> temporal polish</label>
+            <label class="status"><input type="checkbox" id="optSynthetic"/> synthetic boxes</label>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="export" id="btnExportEdit" disabled>3 · Export clip</button>
+          </div>
+          <div class="progress" id="exportProgress"></div>
+          <div class="status" id="exportMsg">Parse → Run → Export. Or use Creative for comedy crash/swerve clips.</div>
           <h2>Driver cards</h2>
           <div id="driverCards" class="meta">Parse + run to see per-agent decisions.</div>
         </div>
@@ -677,6 +949,7 @@ let parsedScenario = null;
 let simResult = null;
 let selectedRunIdx = 0;
 let highlightTrackId = null;
+let lastExportReport = null;
 
 function setStatus(msg, isErr=false){
   const el = document.getElementById('status');
@@ -1034,6 +1307,24 @@ function renderReport(){
     sum.disclaimer || '',
     'Image-space geometry only. Not a crash prediction or finding of fault.',
   ];
+  if(lastExportReport){
+    lines.push(
+      '--- GENERATED VIDEO EXPORT (Phase 3/4) ---',
+      `job_id: ${lastExportReport.job_id}`,
+      `mode: ${lastExportReport.mode}`,
+      `model: ${lastExportReport.model}`,
+      `seed: ${lastExportReport.seed}`,
+      `run_index: ${lastExportReport.run_index}`,
+      `temporal_polish: ${lastExportReport.temporal_polish}`,
+      `split_screen: ${lastExportReport.split_screen}`,
+      `fallback_used: ${lastExportReport.fallback_used}`,
+      'mask_stats: ' + JSON.stringify(lastExportReport.mask_stats || [], null, 2),
+      lastExportReport.disclaimer || '',
+      'GENERATED fill is not observed footage.',
+    );
+  } else {
+    lines.push('--- GENERATED VIDEO EXPORT ---', 'No export yet. Use Export short edit in What-If Lab.');
+  }
   el.textContent = lines.join('\n');
 }
 
@@ -1099,9 +1390,86 @@ document.getElementById('btnSimulate').onclick = async ()=>{
   }
   renderDriverCards();
   renderReport();
+  const exportBtn = document.getElementById('btnExportEdit');
+  exportBtn.disabled = false;
+  exportBtn.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  document.getElementById('exportMsg').textContent = 'Ensemble ready — hit Export comedy clip.';
   setViewMode('hypothetical');
   setStatus(`Ensemble done · cache=${data.cache_hit?'hit':'miss'} · ${data.summary?.outcome_share_text||''}`);
   draw();
+};
+
+async function pollExportJob(jobId){
+  const el = document.getElementById('exportMsg');
+  const prog = document.getElementById('exportProgress');
+  for(let i=0;i<90;i++){
+    const r = await fetch('api/whatif/generate/' + encodeURIComponent(jobId));
+    const data = await r.json();
+    if(!data.ok){ el.innerHTML = `<span class="err">${data.message||'job failed'}</span>`; return; }
+    prog.textContent = (data.progress||[]).join('\n');
+    el.textContent = `Export ${data.status}…`;
+    if(data.status==='done' && data.download){
+      lastExportReport = data.report || null;
+      renderReport();
+      const mode = data.result?.mode || data.report?.mode || 'generated';
+      const fb = data.result?.fallback_used ? ' · fell back to Phase-1 paste' : '';
+      el.innerHTML = `Export ready (${mode}${fb}). <a href="${data.download}" style="color:var(--amber)">Download MP4</a> · see Report tab for mask/seed/model.`;
+      setStatus('Generated export ready');
+      return;
+    }
+    if(data.status==='error'){
+      el.innerHTML = `<span class="err">${data.error||'export error'}</span>`;
+      return;
+    }
+    await new Promise(res=>setTimeout(res, 400));
+  }
+  el.innerHTML = '<span class="err">Export timed out</span>';
+}
+
+document.getElementById('btnExportEdit').onclick = async ()=>{
+  if(!simResult){ document.getElementById('exportMsg').textContent = 'Run ensemble first.'; return; }
+  const scenario = chipsToScenario() || simResult.scenario;
+  const event = demo?.analysis?.events?.[activeEventIdx] || demo?.analysis?.primary_event;
+  const el = document.getElementById('exportMsg');
+  const prog = document.getElementById('exportProgress');
+  const quality = document.getElementById('optQuality').checked;
+  prog.textContent = 'job:queued';
+  el.textContent = quality
+    ? 'Quality CPU export (sharper truck + Poisson)…'
+    : 'Fast CPU export…';
+  document.getElementById('btnExportEdit').disabled = true;
+  try{
+    const r = await fetch('api/whatif/generate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        ensemble: simResult,
+        scenario,
+        event,
+        analysis: demo?.analysis,
+        source: demo?.demo_source,
+        run_index: selectedRunIdx,
+        duration_sec: quality ? 2.5 : 2,
+        fps: quality ? 8 : 5,
+        max_width: quality ? 960 : 640,
+        synthetic: document.getElementById('optSynthetic').checked,
+        comic_mode: document.getElementById('optComic').checked,
+        quality_mode: quality,
+        generative_refine: quality,
+        temporal_polish: document.getElementById('optTemporal').checked,
+        split_screen: document.getElementById('optSplit').checked,
+      })
+    });
+    const data = await r.json();
+    if(!data.ok){
+      el.innerHTML = `<span class="err">${data.message||'generate failed'}</span>`;
+      return;
+    }
+    prog.textContent = (data.job?.progress||[]).join('\n');
+    el.textContent = data.notice || 'Job started…';
+    await pollExportJob(data.job.id);
+  } finally {
+    document.getElementById('btnExportEdit').disabled = false;
+  }
 };
 
 document.getElementById('btnPrintReport').onclick = ()=> window.print();
@@ -1146,6 +1514,10 @@ loadDemo().catch(err=> setStatus(String(err), true));
 </body>
 </html>
 """
+
+
+CREATIVE_HTML_FALLBACK = """<!DOCTYPE html><html><body style="font-family:monospace;background:#0b0e12;color:#e8eef7;padding:2rem">
+<p>Creative page file missing. Use <a href="./" style="color:#ffc14d">Lab</a>.</p></body></html>"""
 
 
 if __name__ == "__main__":

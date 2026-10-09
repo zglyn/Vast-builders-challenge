@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GHOST Creative — Comedy What-If Export</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #0b0e12; --panel: #12171e; --line: #243041; --text: #e8eef7;
+  --muted: #8b9bb0; --green: #3dffa8; --red: #ff5c5c; --amber: #ffc14d;
+  --blue: #6eb6ff; --danger-bg: rgba(255,92,92,0.12);
+}
+* { box-sizing: border-box; }
+html, body { margin:0; height:100%; background:var(--bg); color:var(--text);
+  font-family:"IBM Plex Mono", ui-monospace, monospace; color-scheme: dark; }
+body {
+  background:
+    radial-gradient(1100px 520px at 8% -8%, #2a1810 0%, transparent 55%),
+    radial-gradient(900px 480px at 100% 0%, #1a1218 0%, transparent 50%),
+    var(--bg);
+}
+.shell { max-width: 1400px; margin: 0 auto; padding: 20px 20px 40px; }
+header { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:18px; }
+.brand { font-family: Syne, sans-serif; font-weight:800; font-size: clamp(2rem, 4vw, 3.2rem); letter-spacing:-0.03em; line-height:0.95; }
+.brand span { color: var(--amber); }
+.tag { color:var(--muted); font-size:0.78rem; max-width: 420px; text-align:right; }
+.site-nav { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+.site-nav a {
+  font-size:0.72rem; color:var(--muted); text-decoration:none;
+  border:1px solid var(--line); padding:6px 12px; border-radius:3px;
+}
+.site-nav a:hover { border-color:var(--blue); color:var(--text); }
+.site-nav a.on { border-color:var(--amber); color:var(--amber); background:rgba(255,193,77,0.08); }
+.grid { display:grid; grid-template-columns: 1.45fr 0.9fr; gap:16px; }
+@media (max-width: 980px){ .grid{ grid-template-columns:1fr; } .tag{ text-align:left; } }
+.panel { background: var(--panel); border:1px solid var(--line); border-radius: 4px; }
+.stage { position:relative; background:#000; aspect-ratio: 16/9; overflow:hidden; }
+video, canvas { position:absolute; inset:0; width:100%; height:100%; }
+canvas { pointer-events:none; }
+.controls { padding:12px 14px; display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--line); }
+.row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+button {
+  background:#1a2330; color:var(--text); border:1px solid var(--line);
+  padding:8px 12px; border-radius:3px; cursor:pointer; font:inherit; font-size:0.78rem;
+}
+button:hover { border-color: var(--blue); }
+button:disabled { opacity:0.4; cursor:not-allowed; }
+button.primary { background: #1d2b24; border-color:#2f5a45; color: var(--green); }
+button.danger { background: var(--danger-bg); border-color:#6a3030; color: var(--red); }
+button.export {
+  width:100%; padding:12px 14px; font-size:0.85rem; font-weight:600;
+  background: rgba(255,193,77,0.12); border-color: var(--amber); color: var(--amber);
+}
+button.export:not(:disabled):hover { background: rgba(255,193,77,0.22); }
+input[type=range] { flex:1; accent-color: var(--amber); }
+.side .panel { padding:14px; }
+h2 { font-family:Syne,sans-serif; font-size:0.95rem; margin:0 0 10px; letter-spacing:0.02em; }
+.meta { font-size:0.72rem; color:var(--muted); line-height:1.55; }
+.status { font-size:0.72rem; color:var(--muted); }
+.err { color:var(--red); }
+.hyp-banner {
+  font-size:0.68rem; color:var(--red); border:1px dashed #6a3030; padding:8px;
+  margin-bottom:10px; background:var(--danger-bg);
+}
+.progress { font-size:0.68rem; color:var(--muted); max-height:90px; overflow:auto; white-space:pre-wrap; }
+.outcome { font-size:0.72rem; color:#c9d4e3; line-height:1.5; margin:8px 0; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }
+.chip {
+  border:1px solid var(--line); background:#182232; color:var(--text);
+  padding:4px 8px; border-radius:3px; font-size:0.68rem; display:flex; gap:6px; align-items:center;
+}
+.chip b { color:var(--amber); font-weight:500; }
+.chip input {
+  width:auto; min-width:64px; max-width:140px; padding:2px 4px; font-size:0.68rem;
+  background:#0e141c; color:#e8eef7; -webkit-text-fill-color:#e8eef7; border:1px solid var(--line);
+}
+textarea, #whatifPrompt {
+  width:100%; background:#0e141c; color:#f4f7fb; -webkit-text-fill-color:#f4f7fb;
+  caret-color: var(--amber); border:1px solid var(--line); border-radius:3px;
+  padding:10px; font:inherit; font-size:0.78rem; line-height:1.4; resize:vertical;
+}
+.prompts { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 12px; }
+.prompts button { font-size:0.68rem; padding:6px 8px; border-color:#5a4020; color:var(--amber); }
+.legend { display:flex; gap:14px; font-size:0.72rem; color:var(--muted); }
+.dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+.dot.g { background:var(--green);} .dot.r { background:var(--red);} .dot.a { background:var(--amber);}
+.view-toggle { display:flex; gap:6px; }
+.view-toggle button.active { border-color:var(--green); color:var(--green); }
+.view-toggle button.active.danger { border-color:var(--red); color:var(--red); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <div class="brand">GH<span>O</span>ST Creative</div>
+      <div class="site-nav">
+        <a href="/app/">GHOST — your what-if lab</a>
+        <a href="/app/bike">Bike — teammate build</a>
+        <a class="on" href="/app/creative">Creative — comedy export</a>
+      </div>
+      <div class="status" id="status">Loading demo…</div>
+    </div>
+    <div class="tag">Comedy what-if clips: truck brakes, swerves, BOOM/SKRRRT gags on real I-24 footage. Labeled hypothetical — not a crash prediction.</div>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="stage" id="stage">
+        <video id="video" playsinline preload="auto"></video>
+        <canvas id="overlay"></canvas>
+      </div>
+      <div class="controls">
+        <div class="row">
+          <button class="primary" id="btnPlay">Play</button>
+          <button id="btnPause">Pause</button>
+          <button class="danger" id="btnFreeze">Freeze near-miss</button>
+          <span class="status" id="clock">t=0.00s</span>
+        </div>
+        <div class="row"><input type="range" id="scrub" min="0" max="1000" value="0"/></div>
+        <div class="row">
+          <div class="view-toggle">
+            <button id="btnReality" class="active">Reality</button>
+            <button id="btnHypo" class="danger">Hypothetical</button>
+          </div>
+          <span class="status" id="viewMode">OBSERVATION</span>
+        </div>
+        <div class="legend">
+          <span><i class="dot g"></i>observed</span>
+          <span><i class="dot r"></i>ghost path</span>
+          <span><i class="dot a"></i>event</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="panel">
+        <div class="hyp-banner">Only the intervened vehicle moves; the car in front stays real. Quality = full rectangular truck paste. Comic SFX are storytelling gags — <b>not crash predictions</b>.</div>
+        <h2>Try a gag</h2>
+        <div class="prompts">
+          <button type="button" data-p="What if the truck slammed the brakes and almost crashes?">Truck brakes</button>
+          <button type="button" data-p="What if the vehicle swerves and almost crashes?">Swerve</button>
+          <button type="button" data-p="What if the truck breaks suddenly into the car in front?">Sudden break</button>
+        </div>
+        <textarea id="whatifPrompt" rows="3" placeholder="What if the truck breaks / swerves and they almost crash?"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="primary" id="btnParse">1 · Parse</button>
+          <button class="danger" id="btnSimulate" disabled>2 · Run</button>
+          <label class="status"><input type="checkbox" id="useLlm" checked/> LLM</label>
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="status" id="parseMsg"></div>
+        <div class="progress" id="simProgress"></div>
+        <div class="outcome" id="outcome"></div>
+
+        <h2 style="margin-top:14px">Export comedy clip</h2>
+        <div class="row" style="margin-top:6px">
+          <label class="status"><input type="checkbox" id="optQuality" checked/> Quality (full truck)</label>
+          <label class="status"><input type="checkbox" id="optComic" checked/> comic gags + SFX</label>
+          <label class="status"><input type="checkbox" id="optSplit"/> Reality|Generated</label>
+          <label class="status"><input type="checkbox" id="optTemporal"/> temporal</label>
+          <label class="status"><input type="checkbox" id="optSynthetic"/> synthetic</label>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="export" id="btnExportEdit" disabled>3 · Export comedy clip</button>
+        </div>
+        <div class="progress" id="exportProgress"></div>
+        <div class="status" id="exportMsg">Parse → Run → Export. Download appears here.</div>
+        <div class="meta" id="meta" style="margin-top:12px">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('overlay');
+const ctx = canvas.getContext('2d');
+let demo = null, activeEventIdx = 0, freezeAt = null, viewMode = 'reality';
+let parsedScenario = null, simResult = null, selectedRunIdx = 0, highlightTrackId = null;
+
+function setStatus(msg, isErr=false){
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status' + (isErr ? ' err' : '');
+}
+function setViewMode(mode){
+  viewMode = mode;
+  document.getElementById('btnReality').classList.toggle('active', mode==='reality');
+  document.getElementById('btnHypo').classList.toggle('active', mode==='hypothetical');
+  document.getElementById('viewMode').textContent = mode==='reality' ? 'OBSERVATION' : 'HYPOTHETICAL';
+  document.getElementById('viewMode').style.color = mode==='reality' ? 'var(--green)' : 'var(--red)';
+  draw();
+}
+document.getElementById('btnReality').onclick = ()=> setViewMode('reality');
+document.getElementById('btnHypo').onclick = ()=> setViewMode('hypothetical');
+document.querySelectorAll('.prompts button').forEach(b=>{
+  b.onclick = ()=>{ document.getElementById('whatifPrompt').value = b.dataset.p; };
+});
+
+function resize(){
+  const r = document.getElementById('stage').getBoundingClientRect();
+  canvas.width = r.width * devicePixelRatio;
+  canvas.height = r.height * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+function drawPath(pts, color, w=2){
+  if(!pts || pts.length<2) return;
+  const vw = video.videoWidth||1280, vh = video.videoHeight||720;
+  const cw = canvas.clientWidth, ch = canvas.clientHeight;
+  ctx.beginPath();
+  pts.forEach((p,i)=>{
+    const x = (p.cx/vw)*cw, y = (p.cy/vh)*ch;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = color; ctx.lineWidth = w; ctx.stroke();
+}
+function draw(){
+  if(!demo) return;
+  resize();
+  ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
+  const a = demo.analysis;
+  const t = freezeAt != null ? freezeAt : video.currentTime;
+  (a.tracks||[]).forEach(tr=>{
+    const path = (tr.full_path||tr.path||[]).filter(p=>p.t<=t+0.05);
+    drawPath(path, 'rgba(61,255,168,0.55)', 1.5);
+  });
+  if(viewMode==='hypothetical' && simResult?.runs?.[selectedRunIdx]){
+    (simResult.runs[selectedRunIdx].ghosts||[]).forEach(g=>{
+      drawPath(g.ghost_path, 'rgba(255,92,92,0.9)', 2.5);
+    });
+  } else if(viewMode==='hypothetical' && a.ghosts){
+    (a.ghosts||[]).forEach(g=> drawPath(g.ghost_path, 'rgba(255,92,92,0.85)', 2.5));
+  }
+  const ev = a.events?.[activeEventIdx] || a.primary_event;
+  if(ev){
+    const vw = video.videoWidth||1280, vh = video.videoHeight||720;
+    const x = (ev.cx_a||ev.cx||0)/vw*canvas.clientWidth;
+    const y = (ev.cy_a||ev.cy||0)/vh*canvas.clientHeight;
+    ctx.fillStyle = 'rgba(255,193,77,0.9)';
+    ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill();
+  }
+}
+
+async function loadDemo(){
+  setStatus('Loading I-24 demo…');
+  const r = await fetch('api/demo');
+  if(!r.ok) throw new Error(await r.text());
+  demo = await r.json();
+  const m = demo.metadata||{};
+  document.getElementById('meta').innerHTML =
+    `<div><b>camera</b> ${m.camera_id||'—'} · <b>location</b> ${m.location||'—'}</div>
+     <div>Creative page uses the same archive clip as Lab.</div>`;
+  video.src = 'api/video';
+  await video.play().catch(()=>{});
+  video.pause();
+  const e = demo.analysis?.primary_event;
+  if(e){ video.currentTime = Math.max(0,(e.t||0)-0.2); }
+  setStatus('Creative studio ready — pick a gag prompt');
+  draw();
+}
+
+function renderChips(chips){
+  const el = document.getElementById('chips');
+  el.innerHTML = '';
+  (chips||[]).forEach(c=>{
+    const d = document.createElement('div');
+    d.className = 'chip';
+    d.innerHTML = `<b>${c.key}</b>`;
+    const inp = document.createElement('input');
+    inp.dataset.key = c.key;
+    inp.value = Array.isArray(c.value) ? c.value.join(',') : (c.value??'');
+    d.appendChild(inp);
+    el.appendChild(d);
+  });
+}
+function chipsToScenario(){
+  if(!parsedScenario) return null;
+  const sc = JSON.parse(JSON.stringify(parsedScenario));
+  document.querySelectorAll('#chips input').forEach(inp=>{
+    const key = inp.dataset.key, val = inp.value.trim();
+    if(key==='targets') sc.targetTrackIds = val.split(/[,\s]+/).filter(Boolean).map(Number);
+    else if(key==='intervention') sc.intervention = val;
+    else if(key==='horizonSec') sc.horizonSec = Number(val)||sc.horizonSec;
+    else if(key==='brakeIntensity'){ sc.params=sc.params||{}; sc.params.brakeIntensity=Number(val); }
+    else if(key==='steerIntensity'){ sc.params=sc.params||{}; sc.params.steerIntensity=Number(val); }
+    else if(key==='delaySec'){ sc.params=sc.params||{}; sc.params.delaySec=Number(val); }
+  });
+  return sc;
+}
+
+document.getElementById('btnParse').onclick = async ()=>{
+  const prompt = document.getElementById('whatifPrompt').value.trim();
+  const event = demo?.analysis?.events?.[activeEventIdx] || demo?.analysis?.primary_event;
+  document.getElementById('parseMsg').textContent = 'Parsing…';
+  const r = await fetch('api/whatif/parse', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ prompt, event, analysis: demo?.analysis, use_llm: document.getElementById('useLlm').checked })
+  });
+  const data = await r.json();
+  if(!data.ok){
+    document.getElementById('parseMsg').innerHTML = `<span class="err">${data.message||'Parse failed'}</span>`;
+    document.getElementById('btnSimulate').disabled = true;
+    return;
+  }
+  parsedScenario = data.scenario;
+  renderChips(data.chips||[]);
+  document.getElementById('parseMsg').textContent = `${data.notice||'OK'} · ${data.source} · targets=${(data.scenario.targetTrackIds||[]).join(',')}`;
+  document.getElementById('btnSimulate').disabled = false;
+};
+
+document.getElementById('btnSimulate').onclick = async ()=>{
+  const scenario = chipsToScenario();
+  if(!scenario) return;
+  const event = demo?.analysis?.events?.[activeEventIdx] || demo?.analysis?.primary_event;
+  document.getElementById('simProgress').textContent = 'running ensemble…';
+  const r = await fetch('api/whatif/simulate', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      scenario, event, analysis: demo?.analysis, n_runs: 8, seed: 42,
+      use_llm: document.getElementById('useLlm').checked, use_agents: true
+    })
+  });
+  const data = await r.json();
+  if(!data.ok){
+    document.getElementById('simProgress').innerHTML = `<span class="err">${data.message||'failed'}</span>`;
+    return;
+  }
+  simResult = data;
+  selectedRunIdx = data.summary?.most_interacting_run ?? 0;
+  document.getElementById('simProgress').textContent = (data.progress||[]).slice(-6).join('\n');
+  document.getElementById('outcome').textContent = data.summary?.outcome_share_text || data.notice || '';
+  document.getElementById('btnExportEdit').disabled = false;
+  document.getElementById('exportMsg').textContent = 'Ready — export comedy clip.';
+  setViewMode('hypothetical');
+  setStatus('Ensemble ready');
+  draw();
+};
+
+async function pollExportJob(jobId){
+  const el = document.getElementById('exportMsg');
+  const prog = document.getElementById('exportProgress');
+  for(let i=0;i<90;i++){
+    const r = await fetch('api/whatif/generate/' + encodeURIComponent(jobId));
+    const data = await r.json();
+    if(!data.ok){ el.innerHTML = `<span class="err">${data.message||'job failed'}</span>`; return; }
+    prog.textContent = (data.progress||[]).join('\n');
+    el.textContent = `Export ${data.status}…`;
+    if(data.status==='done' && data.download){
+      const mode = data.result?.mode || data.report?.mode || 'generated';
+      el.innerHTML = `Ready (${mode}). <a href="${data.download}" style="color:var(--amber)">Download MP4</a>`;
+      setStatus('Comedy export ready');
+      return;
+    }
+    if(data.status==='error'){ el.innerHTML = `<span class="err">${data.error||'export error'}</span>`; return; }
+    await new Promise(res=>setTimeout(res, 400));
+  }
+  el.innerHTML = '<span class="err">Export timed out</span>';
+}
+
+document.getElementById('btnExportEdit').onclick = async ()=>{
+  if(!simResult){ document.getElementById('exportMsg').textContent = 'Run first.'; return; }
+  const quality = document.getElementById('optQuality').checked;
+  const el = document.getElementById('exportMsg');
+  el.textContent = quality ? 'Quality comedy export…' : 'Comedy export…';
+  document.getElementById('btnExportEdit').disabled = true;
+  try{
+    const r = await fetch('api/whatif/generate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        ensemble: simResult,
+        scenario: chipsToScenario() || simResult.scenario,
+        event: demo?.analysis?.events?.[activeEventIdx] || demo?.analysis?.primary_event,
+        analysis: demo?.analysis,
+        source: demo?.demo_source,
+        run_index: selectedRunIdx,
+        duration_sec: quality ? 2.5 : 2,
+        fps: quality ? 8 : 5,
+        max_width: quality ? 960 : 640,
+        synthetic: document.getElementById('optSynthetic').checked,
+        comic_mode: document.getElementById('optComic').checked,
+        quality_mode: quality,
+        generative_refine: quality,
+        temporal_polish: document.getElementById('optTemporal').checked,
+        split_screen: document.getElementById('optSplit').checked,
+      })
+    });
+    const data = await r.json();
+    if(!data.ok){ el.innerHTML = `<span class="err">${data.message||'generate failed'}</span>`; return; }
+    document.getElementById('exportProgress').textContent = (data.job?.progress||[]).join('\n');
+    el.textContent = data.notice || 'Job started…';
+    await pollExportJob(data.job.id);
+  } finally {
+    document.getElementById('btnExportEdit').disabled = false;
+  }
+};
+
+document.getElementById('btnPlay').onclick = ()=>{ freezeAt=null; video.play(); };
+document.getElementById('btnPause').onclick = ()=> video.pause();
+document.getElementById('btnFreeze').onclick = ()=>{
+  const e = demo?.analysis?.events?.[activeEventIdx] || demo?.analysis?.primary_event;
+  if(!e) return;
+  freezeAt = e.t; video.currentTime = Math.max(0, e.t - 0.05); video.pause(); draw();
+};
+document.getElementById('scrub').oninput = (ev)=>{
+  const dur = video.duration || demo?.metadata?.duration || 5;
+  video.currentTime = (Number(ev.target.value)/1000) * dur; draw();
+};
+video.addEventListener('timeupdate', ()=>{
+  document.getElementById('clock').textContent = `t=${video.currentTime.toFixed(2)}s`;
+  const dur = video.duration || demo?.metadata?.duration || 5;
+  document.getElementById('scrub').value = Math.round(1000 * video.currentTime / dur);
+  if(freezeAt!=null && video.currentTime >= freezeAt){ video.pause(); video.currentTime = freezeAt; }
+  draw();
+});
+window.addEventListener('resize', ()=>{ resize(); draw(); });
+loadDemo().catch(err=> setStatus(String(err), true));
+</script>
+</body>
+</html>

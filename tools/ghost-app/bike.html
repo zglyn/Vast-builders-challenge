@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GHOST × Bike — teammate slot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#0b0e12; --panel:#12171e; --line:#243041; --text:#e8eef7;
+  --muted:#8b9bb0; --green:#3dffa8; --red:#ff5c5c; --amber:#ffc14d; --blue:#6eb6ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);
+  font-family:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+body{
+  background:
+    radial-gradient(1000px 500px at 0% -10%, #102818 0%, transparent 55%),
+    radial-gradient(800px 400px at 100% 0%, #121820 0%, transparent 50%),
+    var(--bg);
+}
+.shell{max-width:1100px;margin:0 auto;padding:20px 20px 48px}
+.brand{font-family:Syne,sans-serif;font-weight:800;font-size:clamp(1.8rem,3.5vw,2.8rem);letter-spacing:-0.03em}
+.brand span{color:var(--green)}
+.site-nav{display:flex;gap:8px;margin:10px 0 18px;flex-wrap:wrap}
+.site-nav a{
+  font-size:0.72rem;color:var(--muted);text-decoration:none;
+  border:1px solid var(--line);padding:6px 12px;border-radius:3px;
+}
+.site-nav a:hover{border-color:var(--blue);color:var(--text)}
+.site-nav a.on{border-color:var(--green);color:var(--green);background:rgba(61,255,168,0.08)}
+.banner{
+  border:1px dashed #2f5a45;background:rgba(61,255,168,0.06);color:#b8e0c8;
+  padding:12px;font-size:0.75rem;line-height:1.55;margin-bottom:16px;border-radius:3px;
+}
+.banner b{color:var(--amber)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:16px;margin-bottom:14px}
+h2{font-family:Syne,sans-serif;font-size:0.95rem;margin:0 0 10px}
+.status{font-size:0.72rem;color:var(--muted)}
+.err{color:var(--red)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input[type=text],textarea{
+  width:100%;background:#0e141c;color:#f4f7fb;border:1px solid var(--line);
+  border-radius:3px;padding:10px;font:inherit;font-size:0.78rem;
+}
+button{
+  background:#1a2330;color:var(--text);border:1px solid var(--line);
+  padding:8px 12px;border-radius:3px;cursor:pointer;font:inherit;font-size:0.78rem;
+}
+button.primary{background:#1d2b24;border-color:#2f5a45;color:var(--green)}
+button:hover{border-color:var(--blue)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
+.chips button{font-size:0.68rem;padding:6px 8px;border-color:#2f5a45;color:var(--green)}
+.hit{
+  border:1px solid var(--line);padding:10px;margin-bottom:8px;border-radius:3px;cursor:pointer;
+  font-size:0.72rem;line-height:1.45;
+}
+.hit:hover,.hit.active{border-color:var(--green);background:rgba(61,255,168,0.05)}
+.hit .score{color:var(--amber)}
+.stage{position:relative;background:#000;aspect-ratio:16/9;overflow:hidden;border-radius:3px;margin-top:10px}
+video{position:absolute;inset:0;width:100%;height:100%}
+code{color:var(--amber);font-size:0.7rem}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="brand">Bike <span>slot</span></div>
+  <div class="site-nav">
+    <a href="/app/">GHOST — your what-if lab</a>
+    <a class="on" href="/app/bike">Bike — teammate build</a>
+    <a href="/app/creative">Creative — comedy export</a>
+  </div>
+
+  <div class="banner">
+    <b>Teammate bike app code was not found on this VM</b>
+    (not in <code>tools/</code>, git remotes, Desktop, or the ConfigMap — only GHOST files are here).
+    <br/><br/>
+    To plug their build in: copy it to <code>tools/bike-app/index.html</code> (plus any Python helpers),
+    redeploy, and this tab will serve it automatically.
+    Until then, use the cyclist / bike-lane archive search below so the tab isn’t empty.
+  </div>
+
+  <div class="panel">
+    <h2>Interim: search archive for bikes / cyclists</h2>
+    <div class="chips">
+      <button type="button" data-q="cyclist and car close pass">cyclist close pass</button>
+      <button type="button" data-q="bicycle in traffic">bicycle in traffic</button>
+      <button type="button" data-q="bike lane">bike lane</button>
+      <button type="button" data-q="cyclist swerving around car">cyclist swerve</button>
+      <button type="button" data-q="pedestrian and cyclist at crosswalk">crosswalk cyclist</button>
+    </div>
+    <div class="row">
+      <input type="text" id="q" placeholder="Search VSS archive…" value="cyclist and car close pass" style="flex:1;min-width:200px"/>
+      <button class="primary" id="btnSearch">Search</button>
+    </div>
+    <div class="status" id="status" style="margin-top:8px">Ready.</div>
+    <div id="hits" style="margin-top:12px"></div>
+    <div class="stage" id="stage" style="display:none">
+      <video id="video" controls playsinline></video>
+    </div>
+  </div>
+</div>
+<script>
+const hitsEl = document.getElementById('hits');
+const statusEl = document.getElementById('status');
+const video = document.getElementById('video');
+const stage = document.getElementById('stage');
+
+document.querySelectorAll('.chips button').forEach(b=>{
+  b.onclick = ()=>{ document.getElementById('q').value = b.dataset.q; search(); };
+});
+
+async function search(){
+  const query = document.getElementById('q').value.trim();
+  if(!query) return;
+  statusEl.textContent = 'Searching…';
+  hitsEl.innerHTML = '';
+  stage.style.display = 'none';
+  try{
+    const r = await fetch('api/search', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ query, top_k: 10, llm_top_n: 2, min_similarity: 0.28 })
+    });
+    const data = await r.json();
+    if(!data.ok){
+      statusEl.innerHTML = `<span class="err">${data.message||'search failed'}</span>`;
+      return;
+    }
+    const chunks = data.chunk_results || [];
+    const synth = data.llm_synthesis?.response;
+    statusEl.textContent = `${chunks.length} chunk hit(s)` + (synth ? ' · synthesis below' : '');
+    if(synth){
+      const s = document.createElement('div');
+      s.className = 'hit';
+      s.innerHTML = `<b>Synthesis</b><div style="margin-top:6px;color:var(--muted)">${synth}</div>`;
+      hitsEl.appendChild(s);
+    }
+    chunks.forEach((c,i)=>{
+      const d = document.createElement('div');
+      d.className = 'hit';
+      const src = c.preview_source || c.original_video || c.source || '';
+      const score = c.best_similarity_score ?? c.similarity_score ?? '—';
+      const t0 = c.best_match_start_sec, t1 = c.best_match_end_sec;
+      d.innerHTML = `<div><span class="score">#${i+1} score=${typeof score==='number'?score.toFixed(3):score}</span>
+        · t=${t0 ?? '?'}–${t1 ?? '?'}s</div>
+        <div style="margin-top:4px;word-break:break-all">${src}</div>`;
+      d.onclick = ()=>{
+        document.querySelectorAll('.hit').forEach(h=>h.classList.remove('active'));
+        d.classList.add('active');
+        if(!src) return;
+        stage.style.display = 'block';
+        video.src = 'api/video?source=' + encodeURIComponent(src);
+        if(t0!=null) video.currentTime = Math.max(0, Number(t0));
+        video.play().catch(()=>{});
+      };
+      hitsEl.appendChild(d);
+    });
+    if(!chunks.length){
+      hitsEl.innerHTML = '<div class="status">No hits — teammate may have used a different clip set or re-ingest.</div>';
+    }
+  }catch(e){
+    statusEl.innerHTML = `<span class="err">${e}</span>`;
+  }
+}
+document.getElementById('btnSearch').onclick = search;
+search();
+</script>
+</body>
+</html>

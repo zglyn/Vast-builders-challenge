@@ -219,16 +219,36 @@ class TestParser(unittest.TestCase):
         self.assertEqual(out["scenario"]["intervention"], "earlier_braking")
         self.assertTrue(out["chips"])
 
-    def test_unsupported_swerve(self):
+    def test_creative_swerve(self):
         analysis = _toy_analysis()
         out = parse_whatif(
-            "make the driver swerve into the barrier",
+            "what if the vehicle swerves and almost crashes?",
             event=analysis["primary_event"],
             known_track_ids={1, 2},
             llm_chat=None,
         )
-        self.assertFalse(out["ok"])
-        self.assertTrue(out.get("unsupported"))
+        self.assertTrue(out["ok"])
+        self.assertEqual(out["scenario"]["intervention"], "delayed_lane_change")
+        # Single actor — don't erase/re-paste the other car
+        self.assertEqual(len(out["scenario"]["targetTrackIds"]), 1)
+
+    def test_creative_crash_brake(self):
+        analysis = _toy_analysis()
+        # Label track 1 as truck so "the truck" resolves to one target
+        analysis["primary_event"]["label_a"] = "truck"
+        analysis["primary_event"]["label_b"] = "car"
+        out = parse_whatif(
+            "What if the truck slammed the brakes and they almost crash?",
+            event=analysis["primary_event"],
+            known_track_ids={1, 2},
+            llm_chat=None,
+        )
+        self.assertTrue(out["ok"])
+        self.assertIn(
+            out["scenario"]["intervention"],
+            {"earlier_braking", "stronger_braking", "later_braking"},
+        )
+        self.assertEqual(out["scenario"]["targetTrackIds"], [1])
 
 
 if __name__ == "__main__":
